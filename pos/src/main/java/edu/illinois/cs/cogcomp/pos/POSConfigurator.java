@@ -21,7 +21,7 @@ import java.io.IOException;
 public class POSConfigurator extends Configurator {
     /** A configurable prefix. */
     public static final Property CORPUS_PREFIX = new Property("corpusPrefix",
-            "/shared/corpora/corporaWeb/written/eng/POS/");
+            "/Users/xuanyu/Desktop/data/");
     /** The file containing the training set. */
     public static final Property TRAINING_DATA = new Property("trainingData", CORPUS_PREFIX.value
             + "00-18.br");
@@ -41,7 +41,7 @@ public class POSConfigurator extends Configurator {
     public static final Property UNKNOWN_NAME = new Property("unknownName", "POSTaggerUnknown");
 
     public static final Property MODEL_PATH = new Property("modelPath",
-            "models/edu/illinois/cs/cogcomp/pos/lbjava/");
+            "models/");
     public static final Property BASELINE_MODEL_PATH = new Property("baselineModelPath",
             MODEL_PATH.value + BASELINE_NAME.value + ".lc");
     public static final Property BASELINE_LEX_PATH = new Property("baselineLexPath",

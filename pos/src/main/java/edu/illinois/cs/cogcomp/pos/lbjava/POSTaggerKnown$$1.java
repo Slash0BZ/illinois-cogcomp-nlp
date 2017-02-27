@@ -49,7 +49,7 @@ public class POSTaggerKnown$$1 extends Classifier {
         FeatureVector __result;
         __result = new FeatureVector();
         __result.addFeature(__wordForm.featureValue(__example));
-        __result.addFeature(__paragamVector.featureValue(__example));
+        __result.addFeatures(__paragamVector.classify(__example));
         __result.addFeature(__baselineTarget.featureValue(__example));
         __result.addFeature(__labelTwoBefore.featureValue(__example));
         __result.addFeature(__labelOneBefore.featureValue(__example));

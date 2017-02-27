@@ -62,6 +62,12 @@ public class paragamVector extends Classifier
 
     }
     double[] vec = ps.getVector(w.form);
+    if (vec == null){
+      vec = new double[25];
+      for (int i = 0; i < vec.length; i++){
+        vec[i] = 0;
+      }
+    }
     for (int i = 0; i < vec.length; i++)
     {
       __value = vec[i];
@@ -73,6 +79,7 @@ public class paragamVector extends Classifier
 
     return __result;
   }
+
 
   public double[] realValueArray(Object __example)
   {

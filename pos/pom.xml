@@ -15,7 +15,11 @@
             <artifactId>illinois-core-utilities</artifactId>
             <version>3.0.100</version>
         </dependency>
-
+        <dependency>
+            <groupId>edu.illinois.cs.cogcomp</groupId>
+            <artifactId>illinois-phrasesim</artifactId>
+            <version>1.1</version>
+        </dependency>
         <dependency>
             <groupId>edu.illinois.cs.cogcomp</groupId>
             <artifactId>LBJava</artifactId>
