@@ -11,6 +11,8 @@ import edu.illinois.cs.cogcomp.core.utilities.configuration.ResourceManager;
 import edu.illinois.cs.cogcomp.lbjava.classify.*;
 import edu.illinois.cs.cogcomp.lbjava.nlp.seg.Token;
 import edu.illinois.cs.cogcomp.pos.POSConfigurator;
+import edu.illinois.cs.cogcomp.sim.*;
+import java.io.FileNotFoundException;
 
 import java.util.LinkedList;
 
@@ -25,6 +27,7 @@ public class POSTaggerKnown$$1 extends Classifier {
     private static final labelOneBefore __labelOneBefore = new labelOneBefore();
     private static final labelOneAfter __labelOneAfter = new labelOneAfter();
     private static final labelTwoAfter __labelTwoAfter = new labelTwoAfter();
+    private static final paragamVector __paragamVector = new paragamVector();
     private static final L2bL1b __L2bL1b = new L2bL1b();
     private static final L1bL1a __L1bL1a = new L1bL1a();
     private static final L1aL2a __L1aL2a = new L1aL2a();
@@ -46,6 +49,7 @@ public class POSTaggerKnown$$1 extends Classifier {
         FeatureVector __result;
         __result = new FeatureVector();
         __result.addFeature(__wordForm.featureValue(__example));
+        __result.addFeature(__paragamVector.featureValue(__example));
         __result.addFeature(__baselineTarget.featureValue(__example));
         __result.addFeature(__labelTwoBefore.featureValue(__example));
         __result.addFeature(__labelOneBefore.featureValue(__example));
@@ -76,6 +80,7 @@ public class POSTaggerKnown$$1 extends Classifier {
         result.add(__L2bL1b);
         result.add(__L1bL1a);
         result.add(__L1aL2a);
+        result.add(__paragamVector);
         return result;
     }
 }
