@@ -42,14 +42,13 @@ public class POSTaggerKnown$$1 extends Classifier {
     }
 
     public String getOutputType() {
-        return "discrete%";
+        return "mixed%";
     }
 
     public FeatureVector classify(Object __example) {
         FeatureVector __result;
         __result = new FeatureVector();
         __result.addFeature(__wordForm.featureValue(__example));
-        __result.addFeatures(__paragamVector.classify(__example));
         __result.addFeature(__baselineTarget.featureValue(__example));
         __result.addFeature(__labelTwoBefore.featureValue(__example));
         __result.addFeature(__labelOneBefore.featureValue(__example));
@@ -58,6 +57,7 @@ public class POSTaggerKnown$$1 extends Classifier {
         __result.addFeature(__L2bL1b.featureValue(__example));
         __result.addFeature(__L1bL1a.featureValue(__example));
         __result.addFeature(__L1aL2a.featureValue(__example));
+        __result.addFeatures(__paragamVector.classify(__example));
         return __result;
     }
 
