@@ -202,7 +202,7 @@ public class BIOReader implements Parser
                     continue;
                 }
                 if (c.getAttribute("EntityType").equals("VEH") || c.getAttribute("EntityType").equals("WEA")){
-                    //continue;
+                    continue;
                 }
                 //c.addAttribute("EntityType", "MENTION");
 

@@ -7,6 +7,7 @@
  */
 package org.cogcomp.md;
 
+import edu.illinois.cs.cogcomp.pos.POSAnnotator;
 import org.cogcomp.md.LbjGen.*;
 
 import edu.illinois.cs.cogcomp.annotation.Annotator;
@@ -47,6 +48,7 @@ public class MentionAnnotator extends Annotator{
     private FlatGazetteers gazetteers;
     private BrownClusters brownClusters;
     private WordNetManager wordNet;
+    private POSAnnotator posAnnotator;
 
     private String _mode;
     /**
@@ -71,6 +73,7 @@ public class MentionAnnotator extends Annotator{
     public MentionAnnotator(boolean lazilyInitialize, String mode){
         super(ViewNames.MENTION, new String[]{ViewNames.POS}, lazilyInitialize);
         _mode = mode;
+        posAnnotator = new POSAnnotator();
     }
 
     public void initialize(ResourceManager rm){
@@ -158,6 +161,9 @@ public class MentionAnnotator extends Annotator{
         if (!isInitialized()){
             doInitialize();
         }
+        if (!ta.hasView(ViewNames.POS)){
+            ta.addView(posAnnotator);
+        }
         View mentionView = new SpanLabelView(ViewNames.MENTION, MentionAnnotator.class.getCanonicalName(), ta, 1.0f, true);
         View bioView = new SpanLabelView("BIO", BIOReader.class.getCanonicalName(), ta, 1.0f);
         View tokenView = ta.getView(ViewNames.TOKENS);
@@ -204,6 +210,16 @@ public class MentionAnnotator extends Annotator{
             }
         }
         ta.addView(ViewNames.MENTION, mentionView);
+    }
+
+    public static Constituent getPredictedHeadConstituent(Constituent c){
+        if (c.getAttribute("EntityHeadStartSpan") == null || c.getAttribute("EntityHeadEndSpan") == null){
+            return null;
+        }
+        int cStart = Integer.parseInt(c.getAttribute("EntityHeadStartSpan"));
+        int cEnd = Integer.parseInt(c.getAttribute("EntityHeadEndSpan"));
+        Constituent ret = new Constituent(c.getLabel(), "MENTION_HEADS", c.getTextAnnotation(), cStart, cEnd);
+        return ret;
     }
 
 }
