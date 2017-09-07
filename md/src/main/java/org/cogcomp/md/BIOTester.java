@@ -779,6 +779,49 @@ public class BIOTester {
         System.out.println("F1: " + f);
     }
 
+    public static void test_tac_with_annotator(){
+        ColumnFormatReader columnFormatReader = new ColumnFormatReader("data/tac/2016.nom");
+        POSAnnotator posAnnotator = new POSAnnotator();
+        MentionAnnotator mentionAnnotator = new MentionAnnotator("ACE_NONTYPE");
+        int labeled = 0;
+        int predicted = 0;
+        int correct = 0;
+        try {
+            for (TextAnnotation ta : columnFormatReader) {
+                ta.addView(posAnnotator);
+                mentionAnnotator.addView(ta);
+                View goldView = ta.getView("MENTIONS");
+                View predictedView = ta.getView(ViewNames.MENTION);
+                labeled += goldView.getNumberOfConstituents();
+                for (Constituent pc : predictedView){
+                    if (pc.getAttribute("EntityMentionType").equals("NOM")){
+                        predicted ++;
+                    }
+                }
+                for (Constituent gc : goldView){
+                    Constituent gcHead = ACEReader.getEntityHeadForConstituent(gc, gc.getTextAnnotation(), "A");
+                    for (Constituent pc : predictedView){
+                        Constituent pcHead = MentionAnnotator.getPredictedHeadConstituent(pc);
+                        if (gcHead.getStartSpan() == pcHead.getStartSpan() && gcHead.getEndSpan() == pcHead.getEndSpan()){
+                            if (pc.getAttribute("EntityMentionType").equals("NOM")){
+                                correct ++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+        double p = (double)correct / (double)predicted;
+        double r = (double)correct / (double)labeled;
+        double f = 2 * p * r / (p + r);
+        System.out.println("Precision: " + p);
+        System.out.println("Recall: " + r);
+        System.out.println("F1: " + f);
+    }
+
     /**
      * Calculates the average mention head size by type.
      * Research purposes only
