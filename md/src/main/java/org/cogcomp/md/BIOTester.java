@@ -780,7 +780,10 @@ public class BIOTester {
     }
 
     public static void test_tac_with_annotator(){
-        ColumnFormatReader columnFormatReader = new ColumnFormatReader("data/tac/2016.nom");
+        //Please change this line to test on either nam or nom only
+        String target_mention_type = "nom";
+        //Please change this line to the correct data path
+        ColumnFormatReader columnFormatReader = new ColumnFormatReader("data/tac/2016." + target_mention_type);
         POSAnnotator posAnnotator = new POSAnnotator();
         MentionAnnotator mentionAnnotator = new MentionAnnotator("ACE_NONTYPE");
         int labeled = 0;
@@ -794,18 +797,19 @@ public class BIOTester {
                 View predictedView = ta.getView(ViewNames.MENTION);
                 labeled += goldView.getNumberOfConstituents();
                 for (Constituent pc : predictedView){
-                    if (pc.getAttribute("EntityMentionType").equals("NOM")){
+                    if (pc.getAttribute("EntityMentionType").equals(target_mention_type.toUpperCase())){
                         predicted ++;
                     }
                 }
                 for (Constituent gc : goldView){
-                    Constituent gcHead = ACEReader.getEntityHeadForConstituent(gc, gc.getTextAnnotation(), "A");
+                    Constituent gcHead = ACEReader.getEntityHeadForConstituent(gc, gc.getTextAnnotation(), "NOT_RELEVANT");
                     for (Constituent pc : predictedView){
                         Constituent pcHead = MentionAnnotator.getPredictedHeadConstituent(pc);
                         if (gcHead.getStartSpan() == pcHead.getStartSpan() && gcHead.getEndSpan() == pcHead.getEndSpan()){
-                            if (pc.getAttribute("EntityMentionType").equals("NOM")){
+                            if (pc.getAttribute("EntityMentionType").equals(target_mention_type.toUpperCase())){
                                 correct ++;
                             }
+                            break;
                         }
                     }
                 }
