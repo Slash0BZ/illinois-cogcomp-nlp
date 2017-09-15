@@ -10,6 +10,7 @@ package org.cogcomp.md;
 import edu.illinois.cs.cogcomp.annotation.BasicTextAnnotationBuilder;
 import edu.illinois.cs.cogcomp.core.datastructures.Pair;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.Constituent;
+import edu.illinois.cs.cogcomp.core.datastructures.textannotation.Sentence;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.SpanLabelView;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.TextAnnotation;
 import edu.illinois.cs.cogcomp.lbjava.nlp.ColumnFormat;
@@ -17,7 +18,9 @@ import edu.illinois.cs.cogcomp.nlp.corpusreaders.ACEReader;
 import edu.illinois.cs.cogcomp.nlp.corpusreaders.AnnotationReader;
 import edu.illinois.cs.cogcomp.nlp.corpusreaders.CorpusReaderConfigurator;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,9 +35,11 @@ public class ColumnFormatReader extends AnnotationReader<TextAnnotation> {
     List<String> _filePaths;
     List<TextAnnotation> _tas;
     private int _tas_idx;
+    private int _t_mentions;
     public ColumnFormatReader(String path){
         super(CorpusReaderConfigurator.buildResourceManager(path));
         _path = path;
+        _t_mentions = 0;
         fillPaths();
         readTextAnnotations();
     }
@@ -57,84 +62,86 @@ public class ColumnFormatReader extends AnnotationReader<TextAnnotation> {
         }
     }
     public TextAnnotation readSingleFile(String file){
-        System.out.println(file);
-        ColumnFormat columnFormat = new ColumnFormat(file);
         List<String[]> tokens = new ArrayList<>();
         List<Pair<Integer, Integer>> mentions = new ArrayList<>();
         List<String> mentionTypes = new ArrayList<>();
         List<String> curSentence = new ArrayList<>();
         List<Integer> curMention = new ArrayList<>();
         int tokenIdx = 0;
-        columnFormat.reset();
-        boolean prevNull = false;
-        for (Object lineObject  = columnFormat.next(); lineObject != null; lineObject = columnFormat.next()){
-            if (lineObject == null || ((String[])lineObject).length == 0){
-                if (prevNull){
-                    break;
+        BufferedReader br = null;
+        TextAnnotation ta = null;
+        boolean contSig = false;
+        try {
+            br = new BufferedReader(new FileReader(file));
+            String rawLine;
+            while ((rawLine = br.readLine()) != null) {
+                if (rawLine.length() < 1){
+                    contSig = true;
+                    continue;
                 }
+                if (contSig){
+                    String[] curSentenceArr = new String[curSentence.size()];
+                    curSentenceArr = curSentence.toArray(curSentenceArr);
+                    tokens.add(curSentenceArr);
+                    curSentence = new ArrayList<>();
+                    contSig = false;
+                }
+                String[] line = rawLine.split("\t");
+                String word = line[5];
+
+                curSentence.add(word);
+                String mentionType = line[0];
+                if (mentionType.startsWith("B-")) {
+                    if (curMention.size() > 0) {
+                        mentions.add(new Pair<>(curMention.get(0), curMention.get(curMention.size() - 1) + 1));
+                        curMention = new ArrayList<>();
+                    }
+                    curMention.add(tokenIdx);
+                    String[] group = mentionType.split("-");
+                    mentionTypes.add(group[1]);
+                }
+                if (mentionType.startsWith("I-")) {
+                    curMention.add(tokenIdx);
+                }
+                if (mentionType.equals("O")) {
+                    if (curMention.size() > 0) {
+                        mentions.add(new Pair<>(curMention.get(0), curMention.get(curMention.size() - 1) + 1));
+                        curMention = new ArrayList<>();
+                    }
+                }
+                tokenIdx++;
+            }
+            if (curMention.size() > 0) {
+                mentions.add(new Pair<>(curMention.get(0), curMention.get(curMention.size() - 1)));
+            }
+            if (curSentence.size() > 0) {
                 String[] curSentenceArr = new String[curSentence.size()];
                 curSentenceArr = curSentence.toArray(curSentenceArr);
                 tokens.add(curSentenceArr);
-                curSentence = new ArrayList<>();
-                prevNull = true;
-                continue;
             }
-            prevNull = false;
-            String[] line = (String[])lineObject;
-            String word = line[5];
+            ta = BasicTextAnnotationBuilder.createTextAnnotationFromTokens(tokens);
 
-            curSentence.add(word);
-            String mentionType = line[0];
-            if (mentionType.startsWith("B-")){
-                if (curMention.size() > 0) {
-                    mentions.add(new Pair<>(curMention.get(0), curMention.get(curMention.size() - 1) + 1));
-                    curMention = new ArrayList<>();
+            SpanLabelView mentionView = new SpanLabelView("MENTIONS", this.getClass().getCanonicalName(), ta, 1.0f);
+            for (int i = 0; i < mentions.size(); i++) {
+                Pair<Integer, Integer> curBound = mentions.get(i);
+                String curType = mentionTypes.get(i);
+                Constituent constituent = new Constituent("MENTION", 1.0f, "MENTIONS", ta, curBound.getFirst(), curBound.getSecond());
+                constituent.addAttribute("EntityType", curType);
+                constituent.addAttribute(ACEReader.EntityHeadStartCharOffset, "HEAD");
+                constituent.addAttribute(ACEReader.EntityHeadEndCharOffset, "HEAD");
+                if (_path.contains("nom")) {
+                    constituent.addAttribute("EntityMentionType", "NOM");
+                } else {
+                    constituent.addAttribute("EntityMentionType", "NAM");
                 }
-                curMention.add(tokenIdx);
-                String[] group = mentionType.split("-");
-                mentionTypes.add(group[1]);
+                mentionView.addConstituent(constituent);
             }
-            if (mentionType.startsWith("I-")){
-                curMention.add(tokenIdx);
-            }
-            if (mentionType.equals("O")){
-                if (curMention.size() > 0) {
-                    mentions.add(new Pair<>(curMention.get(0), curMention.get(curMention.size() - 1) + 1));
-                    curMention = new ArrayList<>();
-                }
-            }
-            tokenIdx ++;
+            ta.addView("MENTIONS", mentionView);
+            br.close();
         }
-        columnFormat.reset();
-        if (curMention.size() > 0){
-            mentions.add(new Pair<>(curMention.get(0), curMention.get(curMention.size() - 1)));
+        catch (Exception e){
+            e.printStackTrace();
         }
-        if (curSentence.size() > 0){
-            String[] curSentenceArr = new String[curSentence.size()];
-            curSentenceArr = curSentence.toArray(curSentenceArr);
-            tokens.add(curSentenceArr);
-        }
-        TextAnnotation ta = BasicTextAnnotationBuilder.createTextAnnotationFromTokens(tokens);
-        SpanLabelView mentionView = new SpanLabelView("MENTIONS", this.getClass().getCanonicalName(), ta, 1.0f);
-        if (mentionTypes.size() != mentions.size()){
-            System.out.println("ERROR");
-        }
-        for (int i = 0; i < mentions.size();i ++){
-            Pair<Integer, Integer> curBound = mentions.get(i);
-            String curType = mentionTypes.get(i);
-            Constituent constituent = new Constituent("MENTION", 1.0f, "MENTIONS", ta, curBound.getFirst(), curBound.getSecond());
-            constituent.addAttribute("EntityType", curType);
-            constituent.addAttribute(ACEReader.EntityHeadStartCharOffset, "HEAD");
-            constituent.addAttribute(ACEReader.EntityHeadEndCharOffset, "HEAD");
-            if (_path.contains("nom")){
-                constituent.addAttribute("EntityMentionType", "NOM");
-            }
-            else{
-                constituent.addAttribute("EntityMentionType", "NAM");
-            }
-            mentionView.addConstituent(constituent);
-        }
-        ta.addView("MENTIONS", mentionView);
         return ta;
     }
     public boolean hasNext(){

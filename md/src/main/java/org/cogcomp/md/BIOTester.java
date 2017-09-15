@@ -173,11 +173,13 @@ public class BIOTester {
         }
         train_parser.reset();
         classifier.initialize(examples, preExtractLearner.getLexicon().size());
-        for (Object example = train_parser.next(); example != null; example = train_parser.next()){
-            classifier.learn(example);
+        for (int i = 0; i < 1; i++) {
+            train_parser.reset();
+            for (Object example = train_parser.next(); example != null; example = train_parser.next()) {
+                classifier.learn(example);
+            }
+            classifier.doneWithRound();
         }
-        train_parser.reset();
-        classifier.doneWithRound();
         classifier.doneLearning();
         if (modelLoc != null){
             classifier.setModelLocation(modelFileName + ".lc");
@@ -738,11 +740,14 @@ public class BIOTester {
         int total_predicted_mention = 0;
         int total_correct_mention = 0;
 
-        Parser train_parser = new BIOReader("data/all", "ACE05", "NOM", false);
-        Parser test_parser = new BIOReader("data/tac/2016.nom", "ColumnFormat", "ALL", false);
+        Parser train_parser = new BIOReader("data/tac/es/tac2016.train", "ColumnFormat-TRAIN", "ALL", false);
+        Parser test_parser = new BIOReader("data/tac/es/tac2016.test", "ColumnFormat-EVAL", "ALL", false);
         bio_classifier_nom classifier = train_nom_classifier(train_parser);
         String preLevel1 = "";
         String preLevel2 = "";
+        Map<String, Integer> predictedMap = new HashMap<>();
+        Map<String, Integer> labeledMap = new HashMap<>();
+        Map<String, Integer> correctMap = new HashMap<>();
         for (Object example = test_parser.next(); example != null; example = test_parser.next()){
             ((Constituent)example).addAttribute("preBIOLevel1", preLevel1);
             ((Constituent)example).addAttribute("preBIOLevel2", preLevel2);
@@ -752,17 +757,40 @@ public class BIOTester {
             boolean goldStart = false;
             if (predictedTag.startsWith("B") || predictedTag.startsWith("U")){
                 total_predicted_mention ++;
+                String key = predictedTag.split("-")[1];
+                if (predictedMap.containsKey(key)){
+                    predictedMap.put(key, predictedMap.get(key) + 1);
+                }
+                else{
+                    predictedMap.put(key, 1);
+                }
                 predictedStart = true;
             }
             if (goldTag.startsWith("B") || goldTag.startsWith("U")){
                 total_labeled_mention ++;
+                String key = goldTag.split("-")[1];
+                if (labeledMap.containsKey(key)){
+                    labeledMap.put(key, labeledMap.get(key) + 1);
+                }
+                else{
+                    labeledMap.put(key, 1);
+                }
                 goldStart = true;
             }
             if (predictedStart && goldStart){
                 Constituent goldMention = getConstituent((Constituent)example, classifier, true);
                 Constituent predictedMention = getConstituent((Constituent)example, classifier, false);
                 if (goldMention.getStartSpan() == predictedMention.getStartSpan() && goldMention.getEndSpan() == predictedMention.getEndSpan()){
-                    total_correct_mention ++;
+                    if (goldMention.getAttribute("EntityType").equals(predictedMention.getAttribute("EntityType"))) {
+                        total_correct_mention++;
+                        String key = goldMention.getAttribute("EntityType");
+                        if (correctMap.containsKey(key)){
+                            correctMap.put(key, correctMap.get(key) + 1);
+                        }
+                        else{
+                            correctMap.put(key, 1);
+                        }
+                    }
                 }
             }
             preLevel2 = preLevel1;
@@ -777,6 +805,13 @@ public class BIOTester {
         System.out.println("Precision: " + p);
         System.out.println("Recall: " + r);
         System.out.println("F1: " + f);
+
+        for (String type : labeledMap.keySet()){
+            p = (double)correctMap.get(type) / (double)predictedMap.get(type);
+            r = (double)correctMap.get(type) / (double)labeledMap.get(type);
+            f = 2 * p * r / (p + r);
+            System.out.println(type + "\t" + p * 100.0 + "\t" + r * 100.0 + "\t" + f * 100.0 + "\t" + labeledMap.get(type));
+        }
     }
 
     public static void test_tac_with_annotator(){
