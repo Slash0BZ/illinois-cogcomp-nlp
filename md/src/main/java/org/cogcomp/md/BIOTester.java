@@ -7,12 +7,10 @@
  */
 package org.cogcomp.md;
 
-import edu.illinois.cs.cogcomp.core.datastructures.textannotation.Sentence;
-import edu.illinois.cs.cogcomp.pos.POSAnnotator;
-import org.cogcomp.md.LbjGen.*;
 import edu.illinois.cs.cogcomp.core.datastructures.Pair;
 import edu.illinois.cs.cogcomp.core.datastructures.ViewNames;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.Constituent;
+import edu.illinois.cs.cogcomp.core.datastructures.textannotation.Sentence;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.TextAnnotation;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.View;
 import edu.illinois.cs.cogcomp.lbjava.classify.Classifier;
@@ -23,9 +21,16 @@ import edu.illinois.cs.cogcomp.lbjava.learn.Learner;
 import edu.illinois.cs.cogcomp.lbjava.learn.Lexicon;
 import edu.illinois.cs.cogcomp.lbjava.parse.Parser;
 import edu.illinois.cs.cogcomp.nlp.corpusreaders.ACEReader;
+import edu.illinois.cs.cogcomp.pos.POSAnnotator;
+import org.cogcomp.md.LbjGen.bio_classifier_nam;
+import org.cogcomp.md.LbjGen.bio_classifier_nom;
+import org.cogcomp.md.LbjGen.bio_classifier_pro;
+import org.cogcomp.md.LbjGen.bio_label;
 
-import java.lang.reflect.Method;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -1063,6 +1068,10 @@ public class BIOTester {
             train_nom_classifier(train_parser_nom, "models/ERE_NOM");
             train_pro_classifier(train_parser_pro, "models/ERE_PRO");
         }
+        else if (corpus.equals("TAC")){
+            Parser train_parser_nom = new BIOReader("data/tac/en/tac2016.train", "ColumnFormat-TRAIN", "ALL", false);
+            train_nom_classifier(train_parser_nom, "models/TAC_NOM");
+        }
     }
 
     public static void TrainACEModel(){
@@ -1074,20 +1083,6 @@ public class BIOTester {
     }
 
     public static void main(String[] args){
-        if (args.length == 0){
-            System.out.println("No method call given.");
-            return;
-        }
-        String methodName;
-        String methodValue = null;
-        Class[] parameters = new Class[]{};
-        methodName = args[0];
-        try {
-            Method m = BIOTester.class.getMethod(methodName, parameters);
-            Object ret = m.invoke(methodValue, parameters);
-        }
-        catch (Exception e){
-            e.printStackTrace();
-        }
+        TrainModel("TAC");
     }
 }
