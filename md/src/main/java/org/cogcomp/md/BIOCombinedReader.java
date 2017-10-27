@@ -23,7 +23,6 @@ import org.cogcomp.Datastore;
 
 import java.io.*;
 import java.util.*;
-import java.lang.*;
 
 /**
  * @ParserType: Constituent
@@ -54,7 +53,7 @@ public class BIOCombinedReader extends BIOReader {
         constituents = getTokensFromTAs();
         cons_idx = 0;
         ta_idx = 0;
-        id = "Hybrid_" + fold;
+        id = "Hybrid_" + mode + "_" + type + "_" + fold;
     }
 
     public BIOCombinedReader(int fold, String mode, String type, Boolean taOnly){
@@ -67,7 +66,7 @@ public class BIOCombinedReader extends BIOReader {
             cons_idx = 0;
         }
         ta_idx = 0;
-        id = "Hybrid_" + fold;
+        id = "Hybrid_" + mode + "_" + fold;
     }
     public List<TextAnnotation> readTasByFold(int fold, String mode){
         List<String> corpus = new ArrayList<>();
@@ -87,38 +86,23 @@ public class BIOCombinedReader extends BIOReader {
             taMap.put(ta.getId(), ta);
         }
         List<TextAnnotation> ret = new ArrayList<>();
-        String file_name = "";
-        if (mode.contains("ACE")) {
-            if (mode.contains("TRAIN")) {
-                file_name = "data/split/ace_train_fold_" + fold;
-            } else if (mode.contains("EVAL")) {
-                file_name = "data/split/ace_eval_fold_" + fold;
-            } else {
-                return ret;
-            }
+        String file_name;
+        if (mode.contains("TRAIN")){
+            file_name = "data/split/train_fold_" + fold;
         }
-        else if (mode.contains("ERE")){
-            if (mode.contains("TRAIN")) {
-                file_name = "data/split/ere_train_fold_" + fold;
-            } else if (mode.contains("EVAL")) {
-                file_name = "data/split/ere_eval_fold_" + fold;
-            } else {
-                return ret;
-            }
-        }
-        else if (mode.contains("ALL")){
-            if (mode.contains("TRAIN")) {
-                file_name = "data/split/train_fold_" + fold;
-            } else if (mode.contains("EVAL")) {
-                file_name = "data/split/eval_fold_" + fold;
-            } else {
-                return ret;
-            }
+        else {
+            file_name = "data/split/eval_fold_" + fold;
         }
         POSAnnotator posAnnotator = new POSAnnotator();
         try (BufferedReader br = new BufferedReader(new FileReader(file_name))) {
             String line;
             while ((line = br.readLine()) != null) {
+                if (mode.contains("ACE") && !(line.startsWith("bn") || line.startsWith("nw"))){
+                    continue;
+                }
+                if (mode.contains("ERE") && (line.startsWith("bn") || line.startsWith("nw"))){
+                    continue;
+                }
                 TextAnnotation ta = taMap.get(line);
                 try {
                     ta.addView(posAnnotator);
