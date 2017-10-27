@@ -7,9 +7,6 @@
  */
 package org.cogcomp.md;
 
-import edu.illinois.cs.cogcomp.pos.POSAnnotator;
-import org.cogcomp.md.LbjGen.*;
-
 import edu.illinois.cs.cogcomp.annotation.Annotator;
 import edu.illinois.cs.cogcomp.annotation.AnnotatorException;
 import edu.illinois.cs.cogcomp.core.datastructures.Pair;
@@ -25,9 +22,15 @@ import edu.illinois.cs.cogcomp.lbjava.learn.Learner;
 import edu.illinois.cs.cogcomp.ner.ExpressiveFeatures.BrownClusters;
 import edu.illinois.cs.cogcomp.ner.ExpressiveFeatures.FlatGazetteers;
 import edu.illinois.cs.cogcomp.ner.ExpressiveFeatures.GazetteersFactory;
+import edu.illinois.cs.cogcomp.pos.POSAnnotator;
 import org.cogcomp.Datastore;
+import org.cogcomp.md.LbjGen.bio_classifier_nam;
+import org.cogcomp.md.LbjGen.bio_classifier_nom;
+import org.cogcomp.md.LbjGen.bio_classifier_pro;
+import org.cogcomp.md.LbjGen.extent_classifier;
 
 import java.io.File;
+import java.util.List;
 import java.util.Vector;
 
 /**
@@ -189,8 +192,8 @@ public class MentionAnnotator extends Annotator{
             Constituent currentBIO = bioView.getConstituentsCoveringToken(i).get(0);
             currentBIO.addAttribute("preBIOLevel1", preBIOLevel1);
             currentBIO.addAttribute("preBIOLevel2", preBIOLevel2);
-            Pair<String, Integer> prediction = BIOTester.joint_inference(currentBIO, candidates);
-            String predictedTag = prediction.getFirst();
+            Pair<Pair<String, List<Pair<String, Double>>>, Integer> prediction = BIOTester.joint_inference(currentBIO, candidates);
+            String predictedTag = prediction.getFirst().getFirst();
             preBIOLevel2 = preBIOLevel1;
             preBIOLevel1 = predictedTag;
             if (predictedTag.startsWith("B") || predictedTag.startsWith("U")){

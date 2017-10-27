@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * This is for running testers and utilities.
@@ -362,11 +361,10 @@ public class BIOTester {
      *          The String: The result of the joint inferencing
      *          The Integer: The index of the selected learner in candidates
      */
-    public static Pair<String, Integer> joint_inference(Constituent t, Learner[] candidates){
+    public static Pair<Pair<String, List<Pair<String, Double>>>, Integer> joint_inference(Constituent t, Learner[] candidates){
 
         double highest_start_score = -10.0;
-
-        Map<Integer, Double> remaining = new ConcurrentHashMap<>();
+        List<Pair<String, Double>> score_list = new ArrayList<>();
         String[] preBIOLevel1 = new String[candidates.length];
         String[] preBIOLevel2 = new String[candidates.length];
         for (int i = 0; i < preBIOLevel1.length; i++){
@@ -377,25 +375,27 @@ public class BIOTester {
         for (int i = 0; i < candidates.length; i++){
             String prediction = candidates[i].discreteValue(t);
             preBIOLevel1[i] = prediction;
+            Double curScore = 0.0;
+            ScoreSet scores = candidates[i].scores(t);
+            Score[] scoresArray = scores.toArray();
+            for (Score s : scoresArray){
+                if (s.value.equals(prediction)){
+                    curScore = s.score;
+                }
+            }
+            score_list.add(new Pair<>(prediction, Math.floor(curScore * 100) / 100));
             if (prediction.startsWith("B") || prediction.startsWith("U")){
-                ScoreSet scores = candidates[i].scores(t);
-                Score[] scoresArray = scores.toArray();
-                for (Score s : scoresArray){
-                    if (s.value.equals(prediction)){
-                        remaining.put(i, s.score);
-                        if (s.score > highest_start_score){
-                            highest_start_score = s.score;
-                            chosen = i;
-                        }
-                    }
+                if (curScore > highest_start_score) {
+                    highest_start_score = curScore;
+                    chosen = i;
                 }
             }
         }
         if (chosen == -1){
-            return new Pair<>("O", -1);
+            return new Pair<>(new Pair<>("O", score_list), -1);
         }
         else{
-            return new Pair<>(candidates[chosen].discreteValue(t), chosen);
+            return new Pair<>(new Pair<>(candidates[chosen].discreteValue(t), score_list), chosen);
         }
     }
 
@@ -506,9 +506,9 @@ public class BIOTester {
                 ((Constituent)example).addAttribute("preBIOLevel1", preBIOLevel1);
                 ((Constituent)example).addAttribute("preBIOLevel2", preBIOLevel2);
 
-                Pair<String, Integer> cands = joint_inference((Constituent)example, candidates);
+                Pair<Pair<String, List<Pair<String, Double>>>, Integer> cands = joint_inference((Constituent)example, candidates);
 
-                String bioTag = cands.getFirst();
+                String bioTag = cands.getFirst().getFirst();
                 if (bioTag.equals("I") && !(preBIOLevel1.equals("I") || preBIOLevel1.equals("B"))){
                     violations ++;
                 }
@@ -665,9 +665,9 @@ public class BIOTester {
             ((Constituent)example).addAttribute("preBIOLevel1", preBIOLevel1);
             ((Constituent)example).addAttribute("preBIOLevel2", preBIOLevel2);
 
-            Pair<String, Integer> cands = joint_inference((Constituent)example, candidates);
+            Pair<Pair<String, List<Pair<String, Double>>>, Integer> cands = joint_inference((Constituent)example, candidates);
 
-            String bioTag = cands.getFirst();
+            String bioTag = cands.getFirst().getFirst();
             int learnerIdx = cands.getSecond();
 
             preBIOLevel2 = preBIOLevel1;
@@ -739,10 +739,10 @@ public class BIOTester {
                         Constituent curBioCons = BioView.getConstituentsCoveringToken(i).get(0);
                         curBioCons.addAttribute("preBIOLevel1", preBIOLevel1Dup);
                         curBioCons.addAttribute("preBIOLevel2", preBIOLevel2Dup);
-                        Pair<String, Integer> candsDup = joint_inference(curBioCons, candidates);
+                        Pair<Pair<String, List<Pair<String, Double>>>, Integer> candsDup = joint_inference(curBioCons, candidates);
                         String prediction = null;
-                        if (candsDup.getFirst().startsWith("B") || candsDup.getFirst().startsWith("U")){
-                            prediction = candsDup.getFirst().split("-")[0];
+                        if (candsDup.getFirst().getFirst().startsWith("B") || candsDup.getFirst().getFirst().startsWith("U")){
+                            prediction = candsDup.getFirst().getFirst().split("-")[0];
                             candidateIdx = candsDup.getSecond();
                         }
                         else{
@@ -803,9 +803,9 @@ public class BIOTester {
             ((Constituent)example).addAttribute("preBIOLevel1", preBIOLevel1);
             ((Constituent)example).addAttribute("preBIOLevel2", preBIOLevel2);
 
-            Pair<String, Integer> prediction = joint_inference((Constituent)example, candidates);
+            Pair<Pair<String, List<Pair<String, Double>>>, Integer> prediction = joint_inference((Constituent)example, candidates);
             String goldTag = ((Constituent)example).getAttribute("BIO");
-            String predictedTag = prediction.getFirst();
+            String predictedTag = prediction.getFirst().getFirst();
             preBIOLevel2 = preBIOLevel1;
             preBIOLevel1 = predictedTag;
             boolean goldStart = false;
@@ -1033,6 +1033,7 @@ public class BIOTester {
         int total_ace_type_correct = 0;
         int total_ere_type_correct = 0;
 
+        List<String> outputs = new ArrayList<>();
 
         for (int i = 0; i < 5; i++) {
             Parser test_parser = new BIOCombinedReader(i, "ALL-EVAL", "ALL");
@@ -1049,13 +1050,13 @@ public class BIOTester {
             bio_classifier_nomc classifier_nom_ere = train_nom_classifierc(train_parser_nom_ere, null);
             bio_classifier_proc classifier_pro_ere = train_pro_classifierc(train_parser_pro_ere, null);
 
-            Learner[] candidates = new Learner[6];
-            candidates[0] = classifier_nam_ace;
-            candidates[1] = classifier_nom_ace;
-            candidates[2] = classifier_pro_ace;
-            candidates[3] = classifier_nam_ere;
-            candidates[4] = classifier_nom_ere;
-            candidates[5] = classifier_pro_ere;
+            Learner[] candidates_joint = new Learner[6];
+            candidates_joint[0] = classifier_nam_ace;
+            candidates_joint[1] = classifier_nom_ace;
+            candidates_joint[2] = classifier_pro_ace;
+            candidates_joint[3] = classifier_nam_ere;
+            candidates_joint[4] = classifier_nom_ere;
+            candidates_joint[5] = classifier_pro_ere;
 
             String preBIOLevel1 = "";
             String preBIOLevel2 = "";
@@ -1065,9 +1066,9 @@ public class BIOTester {
                 ((Constituent) example).addAttribute("preBIOLevel1", preBIOLevel1);
                 ((Constituent) example).addAttribute("preBIOLevel2", preBIOLevel2);
 
-                Pair<String, Integer> cands = joint_inference((Constituent) example, candidates);
+                Pair<Pair<String, List<Pair<String, Double>>>, Integer> cands = joint_inference((Constituent) example, candidates_joint);
 
-                String bioTag = cands.getFirst();
+                String bioTag = cands.getFirst().getFirst();
                 int learnerIdx = cands.getSecond();
 
                 preBIOLevel2 = preBIOLevel1;
@@ -1102,8 +1103,8 @@ public class BIOTester {
                 }
 
                 if (goldStart && predictedStart) {
-                    Constituent goldMention = getConstituent((Constituent) example, candidates[learnerIdx], true);
-                    Constituent predictMention = getConstituent((Constituent) example, candidates[learnerIdx], false);
+                    Constituent goldMention = getConstituent((Constituent) example, candidates_joint[learnerIdx], true);
+                    Constituent predictMention = getConstituent((Constituent) example, candidates_joint[learnerIdx], false);
                     boolean boundaryCorrect = false;
                     boolean typeCorrect = false;
                     if (goldMention.getStartSpan() == predictMention.getStartSpan() && goldMention.getEndSpan() == predictMention.getEndSpan()) {
@@ -1131,6 +1132,64 @@ public class BIOTester {
                             }
                         }
                     }
+                }
+
+                if (predictedStart && !goldStart){
+                    Constituent predictMention = getConstituent((Constituent) example, candidates_joint[learnerIdx], false);
+                    TextAnnotation ta = predictMention.getTextAnnotation();
+                    String output = "";
+                    Sentence sentence = predictMention.getTextAnnotation().getSentenceFromToken(predictMention.getStartSpan());
+                    String goldMentionViewName = ViewNames.MENTION_ERE;
+                    if (ta.getId().startsWith("bn") || ta.getId().startsWith("nw")){
+                        goldMentionViewName = ViewNames.MENTION_ACE;
+                    }
+                    List<Constituent> goldMentions = ta.getView(goldMentionViewName).getConstituentsCoveringSpan(sentence.getStartSpan(), sentence.getEndSpan());
+                    List<Integer> goldStarts = new ArrayList<>();
+                    List<Integer> goldEnds = new ArrayList<>();
+                    for (Constituent c : goldMentions){
+                        Constituent cHead = ACEReader.getEntityHeadForConstituent(c, ta, "");
+                        if (cHead == null){
+                            continue;
+                        }
+                        goldStarts.add(cHead.getStartSpan());
+                        goldEnds.add(cHead.getEndSpan());
+                    }
+                    for (int t = sentence.getStartSpan(); t < sentence.getEndSpan(); t++){
+                        if (goldEnds.contains(t)){
+                            output = output.substring(0, output.length() - 1);
+                            output += "} ";
+                        }
+                        if (goldStarts.contains(t)){
+                            output += "{";
+                        }
+                        if (t == predictMention.getStartSpan()){
+                            output += "[";
+                        }
+                        if (t == predictMention.getEndSpan()){
+                            output = output.substring(0, output.length() - 1);
+                            output += "] ";
+                        }
+                        output += ta.getToken(t) + " ";
+                    }
+                    output += "\t";
+                    List<Pair<String, Double>> predictions = cands.getFirst().getSecond();
+                    int chosen = cands.getSecond();
+                    for (int k = 0; k < predictions.size(); k++){
+                        Pair<String, Double> curp = predictions.get(k);
+                        if (k == chosen){
+                            output += "[" + curp.getFirst().charAt(0) + ":" + curp.getSecond() + "]\t";
+                        }
+                        else {
+                            output += curp.getFirst().charAt(0) + ":" + curp.getSecond() + "\t";
+                        }
+                    }
+                    if (predictMention.getTextAnnotation().getId().startsWith("bn") || predictMention.getTextAnnotation().getId().startsWith("nw")){
+                        output += "ACE" + "\t";
+                    }
+                    else {
+                        output += "ERE" + "\t";
+                    }
+                    outputs.add(output);
                 }
             }
         }
@@ -1166,6 +1225,10 @@ public class BIOTester {
         System.out.println("Precision: " + p);
         System.out.println("Recall: " + r);
         System.out.println("F1: " + f);
+
+        for (String output : outputs){
+            System.out.println(output);
+        }
 
     }
 

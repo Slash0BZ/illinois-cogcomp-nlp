@@ -7,8 +7,6 @@
  */
 package org.cogcomp.md;
 
-import org.cogcomp.md.LbjGen.*;
-
 import edu.illinois.cs.cogcomp.core.datastructures.Pair;
 import edu.illinois.cs.cogcomp.core.datastructures.ViewNames;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.Constituent;
@@ -28,6 +26,7 @@ import edu.illinois.cs.cogcomp.ner.ExpressiveFeatures.GazetteersFactory;
 import edu.illinois.cs.cogcomp.nlp.corpusreaders.ACEReader;
 import edu.illinois.cs.cogcomp.pos.POSAnnotator;
 import org.cogcomp.Datastore;
+import org.cogcomp.md.LbjGen.*;
 
 import java.io.File;
 import java.lang.reflect.Method;
@@ -343,8 +342,8 @@ public class ExtentTester {
             for (Object example = test_parser.next(); example != null; example = test_parser.next()){
                 ((Constituent)example).addAttribute("preBIOLevel1", preBIOLevel1);
                 ((Constituent)example).addAttribute("preBIOLevel2", preBIOLevel2);
-                Pair<String, Integer> h_prediction = BIOTester.joint_inference((Constituent)example, h_candidates);
-                String bioTag = h_prediction.getFirst();
+                Pair<Pair<String, List<Pair<String, Double>>>, Integer> h_prediction = BIOTester.joint_inference((Constituent)example, h_candidates);
+                String bioTag = h_prediction.getFirst().getFirst();
                 if (bioTag.startsWith("B") || bioTag.startsWith("U")){
                     Constituent predictMention = BIOTester.getConstituent((Constituent)example, h_candidates[h_prediction.getSecond()], false);
                     predictedHeads.add(predictMention);
