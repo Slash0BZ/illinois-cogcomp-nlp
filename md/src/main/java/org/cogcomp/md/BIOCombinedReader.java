@@ -31,7 +31,7 @@ import java.util.*;
  * The reader reads TextAnnotation list from file.
  * Must use the function "generateNewSplit" to splits before using.
  */
-public class BIOCombinedReader extends BIOReader {
+public class BIOCombinedReader extends BIOReader implements Serializable {
     List<Constituent> constituents;
     List<TextAnnotation> currentTas;
     int cons_idx;
@@ -342,4 +342,29 @@ public class BIOCombinedReader extends BIOReader {
 
     }
 
+    public static void serializeOut(BIOCombinedReader input, String fileName){
+        try {
+            FileOutputStream fos = new FileOutputStream(fileName);
+            ObjectOutputStream oos = new ObjectOutputStream(fos);
+            oos.writeObject(input);
+            oos.close();
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    public static BIOCombinedReader serializeIn(String fileName){
+        BIOCombinedReader ret = null;
+        try {
+            FileInputStream fin = new FileInputStream(fileName);
+            ObjectInputStream ois = new ObjectInputStream(fin);
+            ret = (BIOCombinedReader) ois.readObject();
+            ois.close();
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+        return ret;
+    }
 }

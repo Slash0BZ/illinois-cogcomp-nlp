@@ -391,6 +391,9 @@ public class BIOTester {
                 }
             }
         }
+        if (highest_start_score < 0){
+            chosen = -1;
+        }
         if (chosen == -1){
             return new Pair<>(new Pair<>("O", score_list), -1);
         }
@@ -1036,13 +1039,13 @@ public class BIOTester {
         List<String> outputs = new ArrayList<>();
 
         for (int i = 0; i < 5; i++) {
-            Parser test_parser = new BIOCombinedReader(i, "ALL-EVAL", "ALL");
-            Parser train_parser_nam_ace = new BIOCombinedReader(i, "ACE-TRAIN", "NAM");
-            Parser train_parser_nom_ace = new BIOCombinedReader(i, "ACE-TRAIN", "NOM");
-            Parser train_parser_pro_ace = new BIOCombinedReader(i, "ACE-TRAIN", "PRO");
-            Parser train_parser_nam_ere = new BIOCombinedReader(i, "ERE-TRAIN", "NAM");
-            Parser train_parser_nom_ere = new BIOCombinedReader(i, "ERE-TRAIN", "NOM");
-            Parser train_parser_pro_ere = new BIOCombinedReader(i, "ERE-TRAIN", "PRO");
+            Parser test_parser = BIOCombinedReader.serializeIn("md/preprocess/reader/COMBINED_EVAL_" + i);
+            Parser train_parser_nam_ace = BIOCombinedReader.serializeIn("md/preprocess/reader/COMBINED_ACE_NAM_" + i);
+            Parser train_parser_nom_ace = BIOCombinedReader.serializeIn("md/preprocess/reader/COMBINED_ACE_NOM_" + i);
+            Parser train_parser_pro_ace = BIOCombinedReader.serializeIn("md/preprocess/reader/COMBINED_ACE_PRO_" + i);
+            Parser train_parser_nam_ere = BIOCombinedReader.serializeIn("md/preprocess/reader/COMBINED_ERE_NAM_" + i);
+            Parser train_parser_nom_ere = BIOCombinedReader.serializeIn("md/preprocess/reader/COMBINED_ERE_NOM_" + i);
+            Parser train_parser_pro_ere = BIOCombinedReader.serializeIn("md/preprocess/reader/COMBINED_ERE_PRO_" + i);
             bio_classifier_nam classifier_nam_ace = train_nam_classifier(train_parser_nam_ace);
             bio_classifier_nom classifier_nom_ace = train_nom_classifier(train_parser_nom_ace);
             bio_classifier_pro classifier_pro_ace = train_pro_classifier(train_parser_pro_ace);
@@ -1159,15 +1162,15 @@ public class BIOTester {
                             output = output.substring(0, output.length() - 1);
                             output += "} ";
                         }
+                        if (t == predictMention.getEndSpan()){
+                            output = output.substring(0, output.length() - 1);
+                            output += "] ";
+                        }
                         if (goldStarts.contains(t)){
                             output += "{";
                         }
                         if (t == predictMention.getStartSpan()){
                             output += "[";
-                        }
-                        if (t == predictMention.getEndSpan()){
-                            output = output.substring(0, output.length() - 1);
-                            output += "] ";
                         }
                         output += ta.getToken(t) + " ";
                     }
@@ -1261,6 +1264,25 @@ public class BIOTester {
 
     public static void TrainEREModel(){
         TrainModel("ERE");
+    }
+
+    public static void generateReaders(){
+        for (int i = 0; i < 5; i ++){
+            BIOCombinedReader train_parser_nam_ace = new BIOCombinedReader(i, "ACE-TRAIN", "NAM");
+            BIOCombinedReader train_parser_nom_ace = new BIOCombinedReader(i, "ACE-TRAIN", "NOM");
+            BIOCombinedReader train_parser_pro_ace = new BIOCombinedReader(i, "ACE-TRAIN", "PRO");
+            BIOCombinedReader train_parser_nam_ere = new BIOCombinedReader(i, "ERE-TRAIN", "NAM");
+            BIOCombinedReader train_parser_nom_ere = new BIOCombinedReader(i, "ERE-TRAIN", "NOM");
+            BIOCombinedReader train_parser_pro_ere = new BIOCombinedReader(i, "ERE-TRAIN", "PRO");
+            BIOCombinedReader test = new BIOCombinedReader(i, "ALL-EVAL", "ALL");
+            BIOCombinedReader.serializeOut(train_parser_nam_ace, "md/preprocess/reader/COMBINED_ACE_NAM_" + i);
+            BIOCombinedReader.serializeOut(train_parser_nom_ace, "md/preprocess/reader/COMBINED_ACE_NOM_" + i);
+            BIOCombinedReader.serializeOut(train_parser_pro_ace, "md/preprocess/reader/COMBINED_ACE_PRO_" + i);
+            BIOCombinedReader.serializeOut(train_parser_nam_ere, "md/preprocess/reader/COMBINED_ERE_NAM_" + i);
+            BIOCombinedReader.serializeOut(train_parser_nom_ere, "md/preprocess/reader/COMBINED_ERE_NOM_" + i);
+            BIOCombinedReader.serializeOut(train_parser_pro_ere, "md/preprocess/reader/COMBINED_ERE_PRO_" + i);
+            BIOCombinedReader.serializeOut(test, "md/preprocess/reader/COMBINED_EVAL_" + i);
+        }
     }
 
     public static void main(String[] args){
