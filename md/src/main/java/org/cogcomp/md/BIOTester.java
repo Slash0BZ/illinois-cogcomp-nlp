@@ -350,6 +350,9 @@ public class BIOTester {
         if (c.getTextAnnotation().getId().startsWith("bn") || c.getTextAnnotation().getId().startsWith("nw")){
             return "ACE";
         }
+        if (c.getTextAnnotation().getId().startsWith("ENG")){
+            //return "ERE";
+        }
         return "ERE";
     }
 
@@ -400,16 +403,66 @@ public class BIOTester {
         if (highest_start_score < 0){
             chosen = -1;
         }
+        if (getCorpus(t).equals("ACE")){
+            double lowest = 10.0;
+            boolean allO = true;
+            for (int i = 0; i < 3; i++){
+                if (score_list.get(i).getSecond() < lowest){
+                    lowest = score_list.get(i).getSecond();
+                }
+                if (!score_list.get(i).getFirst().startsWith("O")){
+                    allO = false;
+                }
+            }
+            if (allO && lowest > 1.5){
+                chosen = -1;
+            }
+        }
+        if (getCorpus(t).equals("ERE")){
+            double lowest = 10.0;
+            boolean allO = true;
+            for (int i = 2; i < 6; i++){
+                if (score_list.get(i).getSecond() < lowest){
+                    lowest = score_list.get(i).getSecond();
+                }
+                if (!score_list.get(i).getFirst().startsWith("O")){
+                    allO = false;
+                }
+            }
+            if (allO && lowest > 1.5){
+                chosen = -1;
+            }
+        }
+        /*
         if (getCorpus(t).equals("ACE") && chosen > 2){
-            if (score_list.get(chosen - 3).getFirst().startsWith("O") && score_list.get(chosen - 3).getSecond() > 1.0){
+            boolean allO = true;
+            for (int i = 0; i < 3; i++){
+                if (!score_list.get(i).getFirst().startsWith("O")){
+                    allO = false;
+                }
+            }
+            if (allO && score_list.get(chosen - 3).getFirst().startsWith("O") && score_list.get(chosen - 3).getSecond() > 1.0){
                 chosen = -1;
             }
-        }
-        if (getCorpus(t).equals("ERE") && chosen < 3){
-            if (score_list.get(chosen + 3).getFirst().startsWith("O") && score_list.get(chosen + 3).getSecond() > 1.0){
-                chosen = -1;
+            else if (!score_list.get(chosen - 3).getFirst().startsWith("O")){
+                chosen = chosen - 3;
             }
         }
+        else if (getCorpus(t).equals("ERE") && chosen < 3){
+            boolean allO = true;
+            for (int i = 3; i < 6; i++){
+                if (!score_list.get(i).getFirst().startsWith("O")){
+                    allO = false;
+                }
+            }
+            if (allO && score_list.get(chosen + 3).getFirst().startsWith("O") && score_list.get(chosen + 3).getSecond() > 1.0){
+                chosen = -1;
+            }
+            else if (!score_list.get(chosen + 3).getFirst().startsWith("O")){
+                chosen = chosen + 3;
+            }
+        }
+        */
         if (chosen == -1){
             return new Pair<>(new Pair<>("O", score_list), -1);
         }
@@ -1249,6 +1302,33 @@ public class BIOTester {
             System.out.println(output);
         }
         */
+
+    }
+
+    public static void test_hybrid_tac(){
+        int i = 0;
+        Parser test_parser = BIOCombinedReader.serializeIn("md/preprocess/reader/COMBINED_EVAL_" + i);
+        Parser train_parser_nam_ace = BIOCombinedReader.serializeIn("md/preprocess/reader/COMBINED_ACE_NAM_" + i);
+        Parser train_parser_nom_ace = BIOCombinedReader.serializeIn("md/preprocess/reader/COMBINED_ACE_NOM_" + i);
+        Parser train_parser_pro_ace = BIOCombinedReader.serializeIn("md/preprocess/reader/COMBINED_ACE_PRO_" + i);
+        Parser train_parser_nam_ere = BIOCombinedReader.serializeIn("md/preprocess/reader/COMBINED_ERE_NAM_" + i);
+        Parser train_parser_nom_ere = BIOCombinedReader.serializeIn("md/preprocess/reader/COMBINED_ERE_NOM_" + i);
+        Parser train_parser_pro_ere = BIOCombinedReader.serializeIn("md/preprocess/reader/COMBINED_ERE_PRO_" + i);
+        bio_classifier_nam classifier_nam_ace = train_nam_classifier(train_parser_nam_ace);
+        bio_classifier_nom classifier_nom_ace = train_nom_classifier(train_parser_nom_ace);
+        bio_classifier_pro classifier_pro_ace = train_pro_classifier(train_parser_pro_ace);
+        bio_classifier_namc classifier_nam_ere = train_nam_classifierc(train_parser_nam_ere, null);
+        bio_classifier_nomc classifier_nom_ere = train_nom_classifierc(train_parser_nom_ere, null);
+        bio_classifier_proc classifier_pro_ere = train_pro_classifierc(train_parser_pro_ere, null);
+
+        Learner[] candidates_joint = new Learner[6];
+        candidates_joint[0] = classifier_nam_ace;
+        candidates_joint[1] = classifier_nom_ace;
+        candidates_joint[2] = classifier_pro_ace;
+        candidates_joint[3] = classifier_nam_ere;
+        candidates_joint[4] = classifier_nom_ere;
+        candidates_joint[5] = classifier_pro_ere;
+
 
     }
 
