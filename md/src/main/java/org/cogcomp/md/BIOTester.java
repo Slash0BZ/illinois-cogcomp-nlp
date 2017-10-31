@@ -346,7 +346,14 @@ public class BIOTester {
         return classifier;
     }
 
-    public static bio_classifier_pro train_pro_classifier(Parser train_parser){
+    public static String getCorpus (Constituent c){
+        if (c.getTextAnnotation().getId().startsWith("bn") || c.getTextAnnotation().getId().startsWith("nw")){
+            return "ACE";
+        }
+        return "ERE";
+    }
+
+    public static bio_classifier_pro train_pro_classifier(Parser train_parser) {
         return train_pro_classifier(train_parser, null);
     }
 
@@ -371,7 +378,6 @@ public class BIOTester {
             preBIOLevel2[i] = "O";
         }
         int chosen = -1;
-
         for (int i = 0; i < candidates.length; i++){
             String prediction = candidates[i].discreteValue(t);
             preBIOLevel1[i] = prediction;
@@ -393,6 +399,16 @@ public class BIOTester {
         }
         if (highest_start_score < 0){
             chosen = -1;
+        }
+        if (getCorpus(t).equals("ACE") && chosen > 2){
+            if (score_list.get(chosen - 3).getFirst().startsWith("O") && score_list.get(chosen - 3).getSecond() > 1.0){
+                chosen = -1;
+            }
+        }
+        if (getCorpus(t).equals("ERE") && chosen < 3){
+            if (score_list.get(chosen + 3).getFirst().startsWith("O") && score_list.get(chosen + 3).getSecond() > 1.0){
+                chosen = -1;
+            }
         }
         if (chosen == -1){
             return new Pair<>(new Pair<>("O", score_list), -1);
@@ -1228,10 +1244,11 @@ public class BIOTester {
         System.out.println("Precision: " + p);
         System.out.println("Recall: " + r);
         System.out.println("F1: " + f);
-
+        /*
         for (String output : outputs){
             System.out.println(output);
         }
+        */
 
     }
 
