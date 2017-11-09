@@ -7,6 +7,8 @@
  */
 package org.cogcomp.md;
 
+import edu.illinois.cs.cogcomp.chunker.main.ChunkerAnnotator;
+import edu.illinois.cs.cogcomp.chunker.main.ChunkerConfigurator;
 import edu.illinois.cs.cogcomp.core.datastructures.Pair;
 import edu.illinois.cs.cogcomp.core.datastructures.ViewNames;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.Constituent;
@@ -403,6 +405,7 @@ public class BIOTester {
         if (highest_start_score < 0){
             chosen = -1;
         }
+        /*
         if (getCorpus(t).equals("ACE")){
             double lowest = 10.0;
             boolean allO = true;
@@ -433,6 +436,7 @@ public class BIOTester {
                 chosen = -1;
             }
         }
+        */
         /*
         if (getCorpus(t).equals("ACE") && chosen > 2){
             boolean allO = true;
@@ -1350,8 +1354,8 @@ public class BIOTester {
             train_pro_classifier(train_parser_pro, "models/ERE_PRO");
         }
         else if (corpus.equals("TAC")){
-            Parser train_parser_nom = new BIOReader("data/tac/en/tac2016.train", "ColumnFormat-TRAIN", "ALL", false);
-            train_nom_classifier(train_parser_nom, "models/TAC_NOM");
+            Parser train_parser_nom = new BIOReader("data/tac/zh/tac2016.all", "ColumnFormat-TRAIN", "ALL", false);
+            train_nom_classifier(train_parser_nom, "models/TAC_NOM_ZH");
         }
     }
 
@@ -1382,7 +1386,37 @@ public class BIOTester {
         }
     }
 
+    public static void testMentionMatchWithNps(){
+        ACEReader aceReader;
+        int hit = 0;
+        int total = 0;
+        try{
+            ChunkerAnnotator chunkerAnnotator = new ChunkerAnnotator();
+            chunkerAnnotator.initialize(new ChunkerConfigurator().getDefaultConfig());
+            aceReader = new ACEReader("data/all", false);
+            for (TextAnnotation ta : aceReader){
+                chunkerAnnotator.addView(ta);
+                View mentionView = ta.getView(ViewNames.MENTION_ACE);
+                View chunkerView = ta.getView(ViewNames.SHALLOW_PARSE);
+                for (Constituent c : mentionView.getConstituents()){
+                    total ++;
+                    if (chunkerView.getConstituentsCoveringSpan(c.getStartSpan(), c.getEndSpan()).size() > 0){
+                        hit ++;
+                    }
+                }
+            }
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+        System.out.println(hit);
+        System.out.println(total);
+    }
+
     public static void main(String[] args){
-        test_hybrid();
+        //test_hybrid();
+        //TrainModel("TAC");
+        //generateReaders();
+        testMentionMatchWithNps();
     }
 }
