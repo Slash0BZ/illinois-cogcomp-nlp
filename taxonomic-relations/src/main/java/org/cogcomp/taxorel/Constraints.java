@@ -8,29 +8,24 @@ import java.io.BufferedReader;
 import java.util.*;
 
 /**
- * Created by xuany on 11/9/2017.
+ * @author xuany
  */
 public class Constraints {
 
-    public static String PMI_FILE = "data/jupiter/data/pmi_value.txt";
-    public static String CONSTRAINTS_WEIGHT = "data/jupiter/data/constraints.weight.txt";
+    public static String PMI_FILE = "/Users/daniel/Dropbox/svn/JupiterData/pmi_value.txt";
+    public static String CONSTRAINTS_WEIGHT = "/Users/daniel/Dropbox/svn/JupiterData/constraints.weight.txt";
 
-    public final static String[] invalidCombinationRankedForward = new String[] {
+    public final static String[] invalidCombinationRankedForward = new String[]{
             "1_3_3", "3_1_3", "3_2_3", "0_2_3", "3_2_0", "1_0_3", "2_2_2",
             "2_0_3", "1_3_0", "1_3_1", "3_0_0", "2_3_3", "2_1_0", "1_1_0",
-            "0_3_3", "0_3_2", "3_3_1", "2_3_0", "3_3_0", "3_0_3" };
+            "0_3_3", "0_3_2", "3_3_1", "2_3_0", "3_3_0", "3_0_3"};
 
     public static double getLargestPMI(String pmiFile) {
-
-        double pmiValue = 0.0;
         ArrayList<String> arrLines = DataHandler.readLines(pmiFile);
         String pmi = arrLines.get(0);
         pmi = pmi.trim();
-        pmiValue = Double.parseDouble(pmi);
-        return pmiValue;
-
+        return Double.parseDouble(pmi);
     }
-
 
     public static Map<String, Double[]> classifySupportingInstances(
             ArrayList<Instance> arrSupportingInstances,
@@ -61,9 +56,7 @@ public class Constraints {
             scores[2] = scoreSet.get("2");
             scores[3] = scoreSet.get("3");
             scores[4] = Double.parseDouble(orgLabel);
-
             mapResults.put(key, scores);
-
         }
 
         return mapResults;
@@ -71,7 +64,7 @@ public class Constraints {
     }
 
     public static void getSupportingConcept(int maxAnc, String[] concepts,
-                                      Set<String> setSupportingConcepts) {
+                                            Set<String> setSupportingConcepts) {
         int n = concepts.length;
         int i = 0;
         int count = 0;
@@ -98,12 +91,7 @@ public class Constraints {
     }
 
     public static void sortInferenceOutput(ArrayList<InferenceOutput> arrOutputs) {
-        Collections.sort(arrOutputs, new Comparator<InferenceOutput>() {
-            @Override
-            public int compare(InferenceOutput o1, InferenceOutput o2) {
-                return Double.compare(o2.value, o1.value);
-            }
-        });
+        Collections.sort(arrOutputs, (o1, o2) -> Double.compare(o2.value, o1.value));
     }
 
     public static ArrayList<InferenceOutput> bruteforthConstraintSatisfactionInference(
@@ -128,15 +116,13 @@ public class Constraints {
                         InferenceOutput output = new InferenceOutput(key, value);
                         arrOutputs.add(output);
                         n++;
-                        // if (debug == true) {
-                        // System.out.println("\t" + key + ": valid" + " ("
-                        // +
-                        // value + ")");
-                        // }
+                        if (debug) {
+                            System.out.println("\t" + key + ": valid" + " (" + value + ")");
+                        }
                     } else {
                         double value = softmaxXYs[i] + softmaxXZs[j]
                                 + softmaxYZs[k];
-                        if (debug == true) {
+                        if (debug) {
                             System.out.println("\t" + key + ": invalid" + " ("
                                     + value + ")");
                         }
@@ -145,28 +131,24 @@ public class Constraints {
             }
         }
 
-        // System.out.println("Valid combinations: " + n);
-
         sortInferenceOutput(arrOutputs);
 
         return arrOutputs;
     }
 
     public static double classifyOriginalInstances(ArrayList<Instance> arrInstances,
-                                             Map<String, Double[]> mapSupportingPrediction,
-                                             AFRelationClassifier localClassifier, int maxAnc, int maxSib,
-                                             int maxChi, boolean debug) {
+                                                   Map<String, Double[]> mapSupportingPrediction,
+                                                   AFRelationClassifier localClassifier, int maxAnc, int maxSib,
+                                                   int maxChi, boolean debug) {
 
         double largestPMI = getLargestPMI(PMI_FILE);
 
-        Map<String, Double> mapConstraintProbs = new HashMap<String, Double>();
+        Map<String, Double> mapConstraintProbs = new HashMap<>();
         BufferedReader reader = DataHandler.openReader(CONSTRAINTS_WEIGHT);
         String line2;
         try {
             while ((line2 = reader.readLine()) != null) {
-
                 line2 = line2.trim();
-
                 String chunks[] = line2.split("\\t+");
 
                 if (chunks.length != 4)
@@ -180,8 +162,7 @@ public class Constraints {
 
                 mapConstraintProbs.put(combination, Double.parseDouble(prob));
             }
-        }
-        catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
         DataHandler.closeReader(reader);
@@ -190,8 +171,8 @@ public class Constraints {
             ins.scorePmi_E1E2 = ins.scorePmi_E1E2 / largestPMI;
         }
 
-        ArrayList<String> truePrediction = new ArrayList<String>();
-        ArrayList<String> falsePrediction = new ArrayList<String>();
+        ArrayList<String> truePrediction = new ArrayList<>();
+        ArrayList<String> falsePrediction = new ArrayList<>();
         int count = 0;
         int labeled = 0;
         int predicted = 0;
@@ -209,7 +190,7 @@ public class Constraints {
             String conceptX = parts[2];
             String conceptY = parts[3];
 
-            if (debug == true) {
+            if (debug) {
                 System.out.println();
                 System.out.println("ConceptX: " + conceptX);
                 System.out.println("ConceptY: " + conceptY);
@@ -238,7 +219,7 @@ public class Constraints {
             String chiY = parts[17];
             String[] chiYs = chiY.split("_");
 
-            Set<String> setSupportingConcepts = new HashSet<String>();
+            Set<String> setSupportingConcepts = new HashSet<>();
 
             getSupportingConcept(maxAnc, ancXs, setSupportingConcepts);
             getSupportingConcept(maxAnc, ancYs, setSupportingConcepts);
@@ -256,7 +237,7 @@ public class Constraints {
             scoreXYs[2] = scoreSet.get("2");
             scoreXYs[3] = scoreSet.get("3");
 
-            if (debug == true) {
+            if (debug) {
                 System.out.println("Original label: " + orgLabel);
                 System.out.println("0: " + scoreXYs[0]);
                 System.out.println("1: " + scoreXYs[1]);
@@ -269,7 +250,7 @@ public class Constraints {
 
             for (String z : setSupportingConcepts) {
 
-                if (debug == true) {
+                if (debug) {
                     System.out.println("\tConcept Z: " + z);
                 }
 
@@ -279,7 +260,7 @@ public class Constraints {
                 }
                 Double[] scoreXZs = mapSupportingPrediction.get(key);
 
-                if (debug == true) {
+                if (debug) {
                     System.out.println("\t*" + key);
                     for (int k = 0; k < scoreXZs.length; k++) {
                         System.out.println("\t\t" + k + ":" + scoreXZs[k]);
@@ -292,7 +273,7 @@ public class Constraints {
                 }
                 Double[] scoreYZs = mapSupportingPrediction.get(key);
 
-                if (debug == true) {
+                if (debug) {
                     System.out.println("\t*" + key);
                     for (int k = 0; k < scoreYZs.length; k++) {
                         System.out.println("\t\t" + k + ":" + scoreYZs[k]);
@@ -300,7 +281,7 @@ public class Constraints {
                 }
 
                 if (scoreXZs[4] == 0.0 && scoreYZs[4] == 0.0) {
-                    if (debug == true) {
+                    if (debug) {
                         System.out.println("\tBoth scores are 0.0");
                     }
                     continue;
@@ -332,13 +313,12 @@ public class Constraints {
                     for (int k = 0; (k < arrInferenceOutputs.size() && k < 5); k++) {
                         InferenceOutput inferenceOutput = arrInferenceOutputs
                                 .get(k);
-                        if (debug == true) {
+                        if (debug) {
                             System.out.println(inferenceOutput.key + " ("
                                     + inferenceOutput.value + ")");
                         }
                     }
                 }
-
             }
 
             Set<String> setRelations = mapClassScore.keySet();
@@ -349,7 +329,7 @@ public class Constraints {
                 double newScore = (score) / ((double) freq);
                 mapClassScore.put(relation, newScore);
 
-                if (debug == true) {
+                if (debug) {
                     System.out.println(relation + ": " + score + " " + freq
                             + " - " + newScore);
                 }
@@ -366,14 +346,13 @@ public class Constraints {
             }
 
             int p = Integer.parseInt(maxRelation);
-            if (p != 0){
-                predicted ++;
+            if (p != 0) {
+                predicted++;
             }
-            if (ins.relation != 0){
-                labeled ++;
+            if (ins.relation != 0) {
+                labeled++;
             }
             if (p == ins.relation) {
-
                 String out = "T" + "\t" + p + "\t" + orgLabel + "\t"
                         + ins.toString();
                 truePrediction.add(out);
@@ -382,7 +361,7 @@ public class Constraints {
                     correct++;
                 }
 
-                if (debug == true) {
+                if (debug) {
                     System.out.println(out);
                 }
 
@@ -391,14 +370,14 @@ public class Constraints {
                         + ins.toString();
                 falsePrediction.add(out);
 
-                if (debug == true) {
+                if (debug) {
                     System.out.println(out);
                 }
             }
 
         }
 
-        if (debug == true) {
+        if (debug) {
             for (String out : truePrediction)
                 System.out.println(out);
             for (String out : falsePrediction)
@@ -414,8 +393,8 @@ public class Constraints {
 
         System.out.println("Accuracy: " + acc);
 
-        double p = (double)correct / (double)predicted;
-        double r = (double)correct / (double)labeled;
+        double p = (double) correct / (double) predicted;
+        double r = (double) correct / (double) labeled;
         double f = 2 * p * r / (p + r);
         System.out.println("Precision: " + p);
         System.out.println("Recall: " + r);

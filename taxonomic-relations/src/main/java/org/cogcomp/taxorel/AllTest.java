@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Created by xuany on 11/9/2017.
+ * @author xuany
  */
 public class AllTest {
     public static void simpleClassifierTest() {
@@ -20,13 +20,13 @@ public class AllTest {
         int total = 0;
         try {
             //Ignore this. This is for CV
-            for (int fold = 1; fold < 2; fold ++) {
+            for (int fold = 1; fold < 2; fold++) {
 
                 //TODO: Modify Me to correct local path of '20000.new.first8000.shuffled.inter'!
-                List<Instance> trainingExamples = DataHandler.readTrainingInstances("data/jupiter/data/www10/K3/20000.new.first8000.shuffled.inter", Constants.INPUT_TYPE_INTERMEDIATE);
+                List<Instance> trainingExamples = DataHandler.readTrainingInstances("/Users/daniel/Dropbox/svn/JupiterData/20000.new.first8000.shuffled.inter", Constants.INPUT_TYPE_INTERMEDIATE);
 
                 //TODO: Modify Me to correct local path of '20000.new.last12000.shuffled.inter'!
-                List<Instance> testingExamples = DataHandler.readTestingInstances("data/jupiter/data/www10/K3/20000.new.last12000.shuffled.inter", Constants.INPUT_TYPE_INTERMEDIATE, DataHandler.READ_ALL);
+                List<Instance> testingExamples = DataHandler.readTestingInstances("/Users/daniel/Dropbox/svn/JupiterData/20000.new.last12000.shuffled.inter", Constants.INPUT_TYPE_INTERMEDIATE, DataHandler.READ_ALL);
 
                 AFRelationClassifier afRelationClassifier = new AFRelationClassifier();
                 Label judge = new Label();
@@ -38,7 +38,7 @@ public class AllTest {
                 for (Instance ins : trainingExamples) {
                     ins.scorePmi_E1E2 = ins.scorePmi_E1E2 / largestPMI;
                 }
-                for (Instance ins : testingExamples){
+                for (Instance ins : testingExamples) {
                     ins.scorePmi_E1E2 = ins.scorePmi_E1E2 / largestPMI;
                 }
                 for (int i = 0; i < 5000; i++) {
@@ -49,11 +49,11 @@ public class AllTest {
                 }
                 afRelationClassifier.doneLearning();
                 for (Instance instance : testingExamples) {
-                    total ++;
+                    total++;
                     String tag = afRelationClassifier.discreteValue(instance);
                     if (tag.equals(judge.discreteValue(instance))) {
-                        acc ++;
-                        if (!tag.equals("0")){
+                        acc++;
+                        if (!tag.equals("0")) {
                             correct++;
                         }
                     }
@@ -65,20 +65,19 @@ public class AllTest {
                     }
                 }
             }
-        }
-        catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
-        double p = (double)correct / (double)predicted;
-        double r = (double)correct / (double)labeled;
+        double p = (double) correct / (double) predicted;
+        double r = (double) correct / (double) labeled;
         double f = 2 * p * r / (p + r);
-        System.out.println("Accuracy: " + (double)acc / (double)total);
+        System.out.println("Accuracy: " + (double) acc / (double) total);
         System.out.println("Precision: " + p);
         System.out.println("Recall: " + r);
         System.out.println("F1: " + f);
     }
 
-    public static void testWithConstraints(){
+    public static void testWithConstraints() {
 
         //TODO: Modify Me to correct local path of '20000.new.last12000.beyondwiki.shuffled.relatedconcept.555.inter'!
         String supportingInterFile = "data/jupiter/data/www10/K3/20000.new.last12000.beyondwiki.shuffled.relatedconcept.555.inter";
@@ -123,14 +122,13 @@ public class AllTest {
             double result = Constraints.classifyOriginalInstances(arrInstances,
                     mapSupportingPrediction, afRelationClassifier, 4, 5,
                     4, true);
-        }
-        catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public static void main(String[] args){
-        //simpleClassifierTest();
+    public static void main(String[] args) {
+        simpleClassifierTest();
         //testWithConstraints();
     }
 }

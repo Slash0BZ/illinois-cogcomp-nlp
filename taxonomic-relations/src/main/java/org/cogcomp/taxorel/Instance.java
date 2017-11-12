@@ -123,7 +123,6 @@ public class Instance {
         this.additionalFeatures2[0] = instance.additionalFeatures2[0];
         this.additionalFeatures2[1] = instance.additionalFeatures2[1];
         this.additionalFeatures2[2] = instance.additionalFeatures2[2];
-
     }
 
     /*
