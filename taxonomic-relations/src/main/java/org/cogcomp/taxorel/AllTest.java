@@ -128,7 +128,7 @@ public class AllTest {
     }
 
     public static void featureExtractionTest(){
-        Instance instance = new Instance("Bill Clinton", "Barak Obama");
+        Instance instance = new Instance("canon powershot g1", "hurricane");
         FeatureExtractor featureExtractor = new FeatureExtractor();
         featureExtractor.extractInstance(instance);
         System.out.println("ratio_ttlcat: " + instance.ratio_TtlCat);
@@ -146,7 +146,7 @@ public class AllTest {
                 .readTrainingInstances(input,
                         Constants.INPUT_TYPE_GOLD);
 
-        ArrayList<Instance> arrOutputInstances = new ArrayList<Instance>();
+
 
         int totalSize = arrInputInstances.size();
 
@@ -154,6 +154,7 @@ public class AllTest {
 
         FeatureExtractor featureExtractor = new FeatureExtractor();
         for (Instance instance : arrInputInstances) {
+            ArrayList<Instance> arrOutputInstances = new ArrayList<Instance>();
 
             System.out.println("Starting: " + instance.entity1 + " - "
                     + instance.entity2);
@@ -164,12 +165,13 @@ public class AllTest {
 
             i++;
 
+            ArrayList<String> arrStringInstances = DataHandler.makeStringInstances(
+                    arrOutputInstances, Constants.INPUT_TYPE_INTERMEDIATE);
+
+            DataHandler.writeLines(arrStringInstances, output);
+
         }
 
-        ArrayList<String> arrStringInstances = DataHandler.makeStringInstances(
-                arrOutputInstances, Constants.INPUT_TYPE_INTERMEDIATE);
-
-        DataHandler.writeLines(arrStringInstances, output);
     }
 
     public static void main(String[] args) {

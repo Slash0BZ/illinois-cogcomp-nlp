@@ -44,6 +44,23 @@ public class FeatureExtractor {
     }
 
     public void extractInstance(Instance instance){
+        int statusCode = 0;
+        if (!WikiHandler.existsEntry(instance.entity1)){
+            statusCode -= 1;
+        }
+        if (!WikiHandler.existsEntry(instance.entity2)){
+            statusCode -= 2;
+        }
+        if (statusCode != 0){
+            instance.scoreCos_AbsCat = statusCode;
+            instance.scoreCos_CatAbs = statusCode;
+            instance.scoreCos_CatCat = statusCode;
+            instance.scoreCos_AbsAbs = statusCode;
+            instance.ratio_TtlCat = statusCode;
+            instance.ratio_CatTtl = statusCode;
+            instance.ratio_CatCat = statusCode;
+            return;
+        }
         instance.scorePmi_E1E2 = calculatePMI(instance.entity1, instance.entity2);
         List<ArticleQueryResult> A = new ArrayList<>();
         List<ArticleQueryResult> B = new ArrayList<>();
@@ -169,9 +186,9 @@ public class FeatureExtractor {
         if (pE1 * pE2 == 0)
             pmi = 0.0;
         else {
-            pmi = Math.log(pE1E2 / (pE1 * pE2));
-            DecimalFormat df = new DecimalFormat("#.###");
-            if (pE1E2 > 0 && (pE1 * pE2) > 0) {
+            if (pE1E2 > 0.0 && (pE1 * pE2) > 0.0) {
+                pmi = Math.log(pE1E2 / (pE1 * pE2));
+                DecimalFormat df = new DecimalFormat("#.###");
                 pmi = Double.parseDouble(df.format(pmi));
             }
         }
@@ -279,9 +296,6 @@ public class FeatureExtractor {
         Set<String> setUnion = new HashSet<String>(setValues);
         setUnion.addAll(setAll);
 
-
-        System.out.println(setInter);
-        System.out.println(setUnion);
         double ratio = 0.0;
 
         if (setUnion.size() > 0)
@@ -333,24 +347,23 @@ public class FeatureExtractor {
             concat += cat + ", ";
         }
         Map<String, Integer> freq = new HashMap<>();
-        TextAnnotationBuilder tab;
-        boolean splitOnHyphens = false;
-        tab = new TokenizerTextAnnotationBuilder(new StatefulTokenizer(splitOnHyphens));
-
-        TextAnnotation ta = tab.createTextAnnotation("", "", concat);
-        try {
-            ta.addView(_posAnnotator);
-        }
-        catch (Exception e){
-            e.printStackTrace();
-        }
-        for (Constituent c : ta.getView(ViewNames.POS)){
-            if (c.getLabel().startsWith("NN") || c.getLabel().startsWith("JJ")){
-                if (!freq.containsKey(c.toString().toLowerCase())){
-                    freq.put(c.toString().toLowerCase(), 1);
-                }
-                else {
-                    freq.put(c.toString().toLowerCase(), freq.get(c.toString().toLowerCase()) + 1);
+        if (concat.length() > 0) {
+            TextAnnotationBuilder tab;
+            boolean splitOnHyphens = false;
+            tab = new TokenizerTextAnnotationBuilder(new StatefulTokenizer(splitOnHyphens));
+            TextAnnotation ta = tab.createTextAnnotation("", "", concat);
+            try {
+                ta.addView(_posAnnotator);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            for (Constituent c : ta.getView(ViewNames.POS)) {
+                if (c.getLabel().startsWith("NN") || c.getLabel().startsWith("JJ")) {
+                    if (!freq.containsKey(c.toString().toLowerCase())) {
+                        freq.put(c.toString().toLowerCase(), 1);
+                    } else {
+                        freq.put(c.toString().toLowerCase(), freq.get(c.toString().toLowerCase()) + 1);
+                    }
                 }
             }
         }

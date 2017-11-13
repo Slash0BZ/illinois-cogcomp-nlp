@@ -58,11 +58,15 @@ public class DataHandler {
         }
     }
 
-    public static BufferedWriter openWriter(String fname) {
+    public static BufferedWriter openWriter(String fname){
+        return openWriter(fname, false);
+    }
+
+    public static BufferedWriter openWriter(String fname, boolean append) {
         BufferedWriter writer;
         try {
             writer = new BufferedWriter(new OutputStreamWriter(
-                    new FileOutputStream(fname), "UTF-8"));
+                    new FileOutputStream(fname, append), "UTF-8"));
             return writer;
         } catch (Exception e) {
             e.printStackTrace();
@@ -309,7 +313,7 @@ public class DataHandler {
 
     public static void writeLines(ArrayList<String> outputLines,
                                   String outputFile) {
-        BufferedWriter writer = openWriter(outputFile);
+        BufferedWriter writer = openWriter(outputFile, true);
         try {
             for (String line : outputLines) {
                 writer.write(line);

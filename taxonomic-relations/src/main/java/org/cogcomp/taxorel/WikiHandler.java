@@ -14,9 +14,6 @@ import java.util.*;
  * Created by xuany on 11/12/2017.
  */
 public class WikiHandler {
-    public static void fetchOneDocExample(){
-
-    }
 
     public static List<String> getTitlesFromQuery(List<String> queries){
         List<String> titles = new ArrayList<>();
@@ -111,12 +108,22 @@ public class WikiHandler {
         JSONObject result = jsonObject.getJSONObject("query").getJSONObject("pages");
         String key = (String)result.keySet().toArray()[0];
         List<String> ret = new ArrayList<>();
+        if (key.equals("-1")){
+            return ret;
+        }
         JSONArray results = result.getJSONObject(key).getJSONArray("categories");
         for (int i = 0; i < result.length(); i++){
             String raw = (String)results.getJSONObject(i).get("title");
             ret.add(raw.substring(9));
         }
         return ret;
+    }
+
+    public static boolean existsEntry(String query){
+        if (getTotalHits(query) > 0){
+            return true;
+        }
+        return false;
     }
 
     public static ArticleQueryResult getInfoFromTitle(String title){
