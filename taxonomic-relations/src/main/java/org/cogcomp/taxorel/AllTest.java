@@ -127,8 +127,23 @@ public class AllTest {
         }
     }
 
+    public static void featureExtractionTest(){
+        Instance instance = new Instance("the mummy", "movie");
+        FeatureExtractor featureExtractor = new FeatureExtractor();
+        featureExtractor.extractInstance(instance);
+        System.out.println("ratio_ttlcat: " + instance.ratio_TtlCat);
+        System.out.println("ratio_catttl: " + instance.ratio_CatTtl);
+        System.out.println("ratio_catcat: " + instance.ratio_CatCat);
+        System.out.println("pmi: " + instance.scorePmi_E1E2);
+        System.out.println("abscat: " + instance.scoreCos_AbsCat);
+        System.out.println("catabs: " + instance.scoreCos_CatAbs);
+        System.out.println("catcat: " + instance.scoreCos_CatCat);
+        System.out.println("absabs: " + instance.scoreCos_AbsAbs);
+    }
+
     public static void main(String[] args) {
-        simpleClassifierTest();
+        //simpleClassifierTest();
         //testWithConstraints();
+        featureExtractionTest();
     }
 }

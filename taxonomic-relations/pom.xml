@@ -71,6 +71,16 @@
             <artifactId>joda-time</artifactId>
             <version>2.7</version>
         </dependency>
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20171018</version>
+        </dependency>
+        <dependency>
+            <groupId>de.mpg.mpi-inf</groupId>
+            <artifactId>javatools</artifactId>
+            <version>1.0</version>
+        </dependency>
     </dependencies>
 
     <build>
