@@ -23,10 +23,10 @@ public class AllTest {
             for (int fold = 1; fold < 2; fold++) {
 
                 //TODO: Modify Me to correct local path of '20000.new.first8000.shuffled.inter'!
-                List<Instance> trainingExamples = DataHandler.readTrainingInstances("/Users/daniel/Dropbox/svn/JupiterData/20000.new.first8000.shuffled.inter", Constants.INPUT_TYPE_INTERMEDIATE);
+                List<Instance> trainingExamples = DataHandler.readTrainingInstances("data/jupiter/DataI/traincpy.inter", Constants.INPUT_TYPE_INTERMEDIATE);
 
                 //TODO: Modify Me to correct local path of '20000.new.last12000.shuffled.inter'!
-                List<Instance> testingExamples = DataHandler.readTestingInstances("/Users/daniel/Dropbox/svn/JupiterData/20000.new.last12000.shuffled.inter", Constants.INPUT_TYPE_INTERMEDIATE, DataHandler.READ_ALL);
+                List<Instance> testingExamples = DataHandler.readTestingInstances("data/jupiter/DataI/testcpy.inter", Constants.INPUT_TYPE_INTERMEDIATE, DataHandler.READ_ALL);
 
                 AFRelationClassifier afRelationClassifier = new AFRelationClassifier();
                 Label judge = new Label();
@@ -128,7 +128,7 @@ public class AllTest {
     }
 
     public static void featureExtractionTest(){
-        Instance instance = new Instance("canon powershot g1", "hurricane");
+        Instance instance = new Instance("newspaper", "tobago news");
         FeatureExtractor featureExtractor = new FeatureExtractor();
         featureExtractor.extractInstance(instance);
         System.out.println("ratio_ttlcat: " + instance.ratio_TtlCat);
@@ -141,7 +141,7 @@ public class AllTest {
         System.out.println("absabs: " + instance.scoreCos_AbsAbs);
     }
 
-    public static void generateIntermediateFile(String input, String output) throws Exception{
+    public static void generateIntermediateFile(String input, String output, int startIdx) throws Exception{
         ArrayList<Instance> arrInputInstances = DataHandler
                 .readTrainingInstances(input,
                         Constants.INPUT_TYPE_GOLD);
@@ -156,20 +156,17 @@ public class AllTest {
         for (Instance instance : arrInputInstances) {
             ArrayList<Instance> arrOutputInstances = new ArrayList<Instance>();
 
+            System.out.println(i - 1 + "/" + totalSize + " done.");
             System.out.println("Starting: " + instance.entity1 + " - "
                     + instance.entity2);
-            featureExtractor.extractInstance(instance);
-
-            System.out.println(i + "/" + totalSize + " done.");
-            arrOutputInstances.add(instance);
-
+            if (i > startIdx) {
+                featureExtractor.extractInstance(instance);
+                arrOutputInstances.add(instance);
+                ArrayList<String> arrStringInstances = DataHandler.makeStringInstances(
+                        arrOutputInstances, Constants.INPUT_TYPE_INTERMEDIATE);
+                DataHandler.writeLines(arrStringInstances, output);
+            }
             i++;
-
-            ArrayList<String> arrStringInstances = DataHandler.makeStringInstances(
-                    arrOutputInstances, Constants.INPUT_TYPE_INTERMEDIATE);
-
-            DataHandler.writeLines(arrStringInstances, output);
-
         }
 
     }
@@ -179,7 +176,7 @@ public class AllTest {
         //testWithConstraints();
         //featureExtractionTest();
         try {
-            generateIntermediateFile("data/jupiter/DataI/train", "data/jupiter/DataI/train.inter");
+            generateIntermediateFile("data/jupiter/DataI/train", "data/jupiter/DataI/train.inter", 0);
         }
         catch (Exception e){
             e.printStackTrace();

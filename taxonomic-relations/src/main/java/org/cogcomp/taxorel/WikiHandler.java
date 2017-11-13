@@ -27,7 +27,7 @@ public class WikiHandler {
                 request = request.substring(0, request.length() - 5);
             }
             request = URLEncoder.encode(request, "UTF-8");
-            URL url = new URL("https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=" + request + "&format=json");
+            URL url = new URL("https://en.wikipedia.org/w/api.php?action=query&list=search&srlimit=max&srsearch=" + request + "&format=json");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
             conn.setRequestProperty("Accept", "application/json");
@@ -111,6 +111,9 @@ public class WikiHandler {
         if (key.equals("-1")){
             return ret;
         }
+        if (!result.getJSONObject(key).has("categories")){
+            return ret;
+        }
         JSONArray results = result.getJSONObject(key).getJSONArray("categories");
         for (int i = 0; i < result.length(); i++){
             String raw = (String)results.getJSONObject(i).get("title");
@@ -153,13 +156,15 @@ public class WikiHandler {
         }
         JSONObject result = jsonObject.getJSONObject("query").getJSONObject("pages");
         String key = (String)result.keySet().toArray()[0];
-        JSONArray cats = result.getJSONObject(key).getJSONArray("categories");
-        for (int j = 0; j < cats.length(); j++){
-            String rawCat = (String)cats.getJSONObject(j).get("title");
-            if (rawCat.startsWith("Category:")){
-                rawCat = rawCat.substring(9);
+        if (result.getJSONObject(key).has("categories")) {
+            JSONArray cats = result.getJSONObject(key).getJSONArray("categories");
+            for (int j = 0; j < cats.length(); j++) {
+                String rawCat = (String) cats.getJSONObject(j).get("title");
+                if (rawCat.startsWith("Category:")) {
+                    rawCat = rawCat.substring(9);
+                }
+                ret.categories.add(rawCat);
             }
-            ret.categories.add(rawCat);
         }
         ret.extract = (String)result.getJSONObject(key).get("extract");
         return ret;

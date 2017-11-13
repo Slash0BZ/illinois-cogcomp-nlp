@@ -146,6 +146,7 @@ public class FeatureExtractor {
     }
 
     public void extractInfoToLists(List<ArticleQueryResult> searchResults, List<String> cats, List<String> titles, List<String> abs){
+        System.out.println("Getting " + searchResults.size() + " category tree information");
         for (ArticleQueryResult r : searchResults){
             cats.addAll(extractCategory(r));
             titles.add(r.title);
@@ -154,20 +155,26 @@ public class FeatureExtractor {
     }
 
     public List<String> extractCategory(ArticleQueryResult r){
-        return extract(r.categories,  0);
+        Set<String> exists = new HashSet<>();
+        return extract(r.categories,  0, exists);
     }
 
-    public List<String> extract(List<String> inputCats, int level){
+    public List<String> extract(List<String> inputCats, int level, Set<String> exists){
         ArrayList<String> arrCats = new ArrayList<String>();
         if (level > K){
             return arrCats;
         }
         for (String c : inputCats){
             NounGroup nounGroup = new NounGroup(c);
-            if (INVALID_CATEGORY_HEAD.contains(nounGroup.head()))
+            if (INVALID_CATEGORY_HEAD.contains(nounGroup.head())) {
                 continue;
+            }
+            if (exists.contains(c)){
+                continue;
+            }
             arrCats.add(c);
-            arrCats.addAll(extract(WikiHandler.getParentCategory(c), level + 1));
+            exists.add(c);
+            arrCats.addAll(extract(WikiHandler.getParentCategory(c), level + 1, exists));
         }
         return arrCats;
     }
@@ -335,13 +342,29 @@ public class FeatureExtractor {
 
     public String getCategoryText(String termA, String termB, List<ArticleQueryResult> A, List<ArticleQueryResult> B){
         List<String> req = new ArrayList<>();
+        List<String> reqA = new ArrayList<>();
+        List<String> reqB = new ArrayList<>();
         req.add(termA);
         req.add(termB);
-        List<String> titles = WikiHandler.getTitlesFromQuery(req);
+        reqA.add(termA);
+        reqB.add(termB);
+        System.out.println("Getting titles combined");
+        List<String> titlesCombined = WikiHandler.getTitlesFromQuery(req);
+        titlesCombined = titlesCombined.subList(0, Math.min(100, titlesCombined.size()));
+        System.out.println("Getting titles combined done.");
+        System.out.println("Getting titles A");
+        List<String> titlesA = WikiHandler.getTitlesFromQuery(reqA);
+        System.out.println("Getting titles A done.");
+        System.out.println("Getting titles B");
+        List<String> titlesB = WikiHandler.getTitlesFromQuery(reqB);
+        System.out.println("Getting titles B done.");
         List<String> categories = new ArrayList<>();
-        for (String t : titles){
+        System.out.println("Getting categories for " + titlesCombined.size() + " titles");
+        for (String t : titlesCombined){
             categories.addAll(WikiHandler.getInfoFromTitle(t).categories);
         }
+        System.out.println("Getting categories done.");
+        System.out.println("Getting supplements");
         String concat = "";
         for (String cat : categories){
             concat += cat + ", ";
@@ -368,7 +391,7 @@ public class FeatureExtractor {
             }
         }
         Map<String, Double> scoredFreq = scoringToken(freq);
-        List<String> supplements = getTopTokenSupplmenetString(scoredFreq);
+        List<String> supplements = getTopTokenSupplmentString(scoredFreq);
         List<String> A_Args = new ArrayList<>();
         A_Args.add(termA);
         A_Args.addAll(supplements);
@@ -376,18 +399,55 @@ public class FeatureExtractor {
         List<String> B_Args = new ArrayList<>();
         B_Args.add(termB);
         B_Args.addAll(supplements);
+        System.out.println("Getting supplements done.");
 
-        List<String> titleAs = WikiHandler.getTitlesFromQuery(A_Args);
-        List<String> titleBs = WikiHandler.getTitlesFromQuery(B_Args);
 
-        for (String a : titleAs){
+        List<String> titleCombinedA = WikiHandler.getTitlesFromQuery(A_Args);
+        titleCombinedA = titleCombinedA.subList(0, Math.min(50, titleCombinedA.size()));
+        Set<String> titleAIntersection = new HashSet<>(titleCombinedA);
+        titleAIntersection.retainAll(titlesA);
+        List<String> titleCombinedB = WikiHandler.getTitlesFromQuery(B_Args);
+        titleCombinedB = titleCombinedB.subList(0, Math.min(50, titleCombinedB.size()));
+        Set<String> titleBIntersection = new HashSet<>(titleCombinedB);
+        titleBIntersection.retainAll(titlesB);
+
+        List<String> candidatesA = new ArrayList<>();
+        List<String> candidatesB = new ArrayList<>();
+
+        int count = 0;
+        for (String s : titleAIntersection){
+            candidatesA.add(s);
+            count ++;
+            if (count > 10){
+                break;
+            }
+        }
+        candidatesA.add(titlesA.get(0));
+
+        count = 0;
+        for (String s : titleBIntersection){
+            candidatesB.add(s);
+            count ++;
+            if (count > 10){
+                break;
+            }
+        }
+        candidatesB.add(titlesB.get(0));
+
+        System.out.println("Getting full information for " + candidatesA.size() + " titles for A");
+        System.out.println("Intersection of A: ");
+        System.out.println(candidatesA);
+        for (String a : candidatesA){
             A.add(WikiHandler.getInfoFromTitle(a));
         }
-
-        for (String b : titleBs){
+        System.out.println("Getting full information for A done.");
+        System.out.println("Getting full information for " + candidatesB.size() + " titles for B");
+        System.out.println("Intersection of B: ");
+        System.out.println(candidatesB);
+        for (String b : candidatesB){
             B.add(WikiHandler.getInfoFromTitle(b));
         }
-
+        System.out.println("Getting full information for B done.");
         return null;
     }
 
@@ -402,7 +462,7 @@ public class FeatureExtractor {
         return scoredFreq;
     }
 
-    private List<String> getTopTokenSupplmenetString(Map<String, Double> freq){
+    private List<String> getTopTokenSupplmentString(Map<String, Double> freq){
         List<String> ret = new ArrayList<>();
         freq = WikiHandler.sortByValue(freq);
         int count = 0;
