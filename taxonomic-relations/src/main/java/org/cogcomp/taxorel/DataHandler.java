@@ -265,4 +265,60 @@ public class DataHandler {
         return arrInstances;
     }
 
+
+
+    public static ArrayList<String> makeStringInstances(
+            ArrayList<Instance> arrInstances, int type) {
+
+        ArrayList<String> arrStringInstances = new ArrayList<String>();
+
+        for (Instance e : arrInstances) {
+
+            // String className = (e.relation == Constants.ANCESTOR_E1_TO_E2 ||
+            // e.relation == Constants.ANCESTOR_E2_TO_E1) ? "_"
+            // : e.entityClass;
+
+            String className = e.entityClass;
+
+            String instance = null;
+            if (type == Constants.INPUT_TYPE_GOLD)
+                instance = e.relation + "\t" + className + "\t" + e.entity1
+                        + "\t" + e.entity2 + "\n";
+            else if (type == Constants.INPUT_TYPE_INTERMEDIATE) {
+                instance = e.relation + "\t" + className + "\t" + e.entity1
+                        + "\t" + e.entity2 + "\t" + e.ratio_TtlCat + "\t"
+                        + e.ratio_CatTtl + "\t" + e.ratio_CatCat + "\t"
+                        + e.scorePmi_E1E2 + "\t" + e.scoreCos_AbsAbs + "\t"
+                        + e.scoreCos_CatCat + "\t" + e.scoreCos_AbsCat + "\t"
+                        + e.scoreCos_CatAbs + "\n";
+            } else {
+                instance = e.relation + "\t" + className + "\t" + e.entity1
+                        + "\t" + e.entity2 + "\t" + e.ratio_TtlCat + "\t"
+                        + e.ratio_CatTtl + "\t" + e.ratio_CatCat + "\t"
+                        + e.scorePmi_E1E2 + "\t" + e.scoreCos_AbsAbs + "\t"
+                        + e.scoreCos_CatCat + "\t" + e.scoreCos_AbsCat + "\t"
+                        + e.scoreCos_CatAbs + "\t" + e.finalScore + "\t"
+                        + e.predictedRelation + "\n";
+            }
+
+            arrStringInstances.add(instance);
+
+        }
+        return arrStringInstances;
+    }
+
+    public static void writeLines(ArrayList<String> outputLines,
+                                  String outputFile) {
+        BufferedWriter writer = openWriter(outputFile);
+        try {
+            for (String line : outputLines) {
+                writer.write(line);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("Unable to write to file " + outputFile);
+            System.exit(1);
+        }
+        closeWriter(writer);
+    }
 }

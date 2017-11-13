@@ -30,7 +30,6 @@ public class WikiHandler {
                 request = request.substring(0, request.length() - 5);
             }
             request = URLEncoder.encode(request, "UTF-8");
-            System.out.println(request);
             URL url = new URL("https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=" + request + "&format=json");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");

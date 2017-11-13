@@ -128,7 +128,7 @@ public class AllTest {
     }
 
     public static void featureExtractionTest(){
-        Instance instance = new Instance("the mummy", "movie");
+        Instance instance = new Instance("Bill Clinton", "Barak Obama");
         FeatureExtractor featureExtractor = new FeatureExtractor();
         featureExtractor.extractInstance(instance);
         System.out.println("ratio_ttlcat: " + instance.ratio_TtlCat);
@@ -141,9 +141,46 @@ public class AllTest {
         System.out.println("absabs: " + instance.scoreCos_AbsAbs);
     }
 
+    public static void generateIntermediateFile(String input, String output) throws Exception{
+        ArrayList<Instance> arrInputInstances = DataHandler
+                .readTrainingInstances(input,
+                        Constants.INPUT_TYPE_GOLD);
+
+        ArrayList<Instance> arrOutputInstances = new ArrayList<Instance>();
+
+        int totalSize = arrInputInstances.size();
+
+        int i = 1;
+
+        FeatureExtractor featureExtractor = new FeatureExtractor();
+        for (Instance instance : arrInputInstances) {
+
+            System.out.println("Starting: " + instance.entity1 + " - "
+                    + instance.entity2);
+            featureExtractor.extractInstance(instance);
+
+            System.out.println(i + "/" + totalSize + " done.");
+            arrOutputInstances.add(instance);
+
+            i++;
+
+        }
+
+        ArrayList<String> arrStringInstances = DataHandler.makeStringInstances(
+                arrOutputInstances, Constants.INPUT_TYPE_INTERMEDIATE);
+
+        DataHandler.writeLines(arrStringInstances, output);
+    }
+
     public static void main(String[] args) {
         //simpleClassifierTest();
         //testWithConstraints();
-        featureExtractionTest();
+        //featureExtractionTest();
+        try {
+            generateIntermediateFile("data/jupiter/DataI/train", "data/jupiter/DataI/train.inter");
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
     }
 }

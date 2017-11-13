@@ -18,6 +18,7 @@ import java.util.*;
 public class FeatureExtractor {
     POSAnnotator _posAnnotator = null;
     IdfManager _idfManager = null;
+    StopWord _stopWord = null;
     int NUM_OF_DOCS = 5510659;
     int K = 2;
     public static final Set<String> INVALID_CATEGORY_HEAD = new HashSet<String>();
@@ -39,6 +40,7 @@ public class FeatureExtractor {
     public FeatureExtractor(){
         _posAnnotator = new POSAnnotator();
         _idfManager = new IdfManager();
+        _stopWord = new StopWord(true);
     }
 
     public void extractInstance(Instance instance){
@@ -59,27 +61,47 @@ public class FeatureExtractor {
         List<String> arrHeadsB = new ArrayList<>();
         List<String> arrDomainB = new ArrayList<>();
 
+        List<String> arrCategoriesBOWA = new ArrayList<>();
+        List<String> arrAbstractsBOWA = new ArrayList<>();
+        List<String> arrCategoriesBOWB = new ArrayList<>();
+        List<String> arrAbstractsBOWB = new ArrayList<>();
+
         extractInfoToLists(A, arrCategoriesA, arrTitlesA, arrAbstractsA);
         extractInfoToLists(B, arrCategoriesB, arrTitlesB, arrAbstractsB);
 
         extractDetailCategoryInfo(arrAbstractsA, arrHeadsA, arrDomainA);
         extractDetailCategoryInfo(arrAbstractsB, arrHeadsB, arrDomainB);
 
+        fillUpWordArray(arrCategoriesA, arrCategoriesBOWA);
+        fillUpWordArray(arrAbstractsA, arrAbstractsBOWA);
+        fillUpWordArray(arrCategoriesB, arrCategoriesBOWB);
+        fillUpWordArray(arrAbstractsB, arrAbstractsBOWB);
+
         try {
-            instance.scoreCos_AbsCat = getCosSim(arrAbstractsA, arrCategoriesB);
-            instance.scoreCos_CatAbs = getCosSim(arrCategoriesA, arrAbstractsB);
-            instance.scoreCos_CatCat = getCosSim(arrCategoriesA, arrCategoriesB);
-            instance.scoreCos_AbsAbs = getCosSim(arrAbstractsA, arrAbstractsB);
+            instance.scoreCos_AbsCat = getCosSim(arrAbstractsBOWA, arrCategoriesBOWB);
+            instance.scoreCos_CatAbs = getCosSim(arrCategoriesBOWA, arrAbstractsBOWB);
+            instance.scoreCos_CatCat = getCosSim(arrCategoriesBOWA, arrCategoriesBOWB);
+            instance.scoreCos_AbsAbs = getCosSim(arrAbstractsBOWA, arrAbstractsBOWB);
             instance.ratio_TtlCat = getDirectionalRatio(Constants.FROM_E1_TO_E2, arrTitlesA, arrCategoriesA, arrHeadsA, arrDomainA,
                                                                                  arrTitlesB, arrCategoriesB, arrHeadsB, arrDomainB);
             instance.ratio_CatTtl = getDirectionalRatio(Constants.FROM_E2_TO_E1, arrTitlesA, arrCategoriesA, arrHeadsA, arrDomainA,
-                    arrTitlesB, arrCategoriesB, arrHeadsB, arrDomainB);
-            instance.scoreCos_CatCat = getCatCatRatio(arrCategoriesA, arrHeadsA, arrCategoriesB, arrHeadsB);
+                                                                                 arrTitlesB, arrCategoriesB, arrHeadsB, arrDomainB);
+            instance.ratio_CatCat = getCatCatRatio(arrCategoriesA, arrHeadsA, arrCategoriesB, arrHeadsB);
         }
         catch (Exception e){
             e.printStackTrace();
         }
+    }
 
+    private void fillUpWordArray(List<String> arrStrings,
+                                 List<String> arrWords) {
+
+        for (String title : arrStrings) {
+            List<String> arrTokens = _stopWord.removeStopWords(title);
+            for (String token : arrTokens)
+                arrWords.add(token);
+
+        }
 
     }
 
@@ -149,7 +171,9 @@ public class FeatureExtractor {
         else {
             pmi = Math.log(pE1E2 / (pE1 * pE2));
             DecimalFormat df = new DecimalFormat("#.###");
-            pmi = Double.parseDouble(df.format(pmi));
+            if (pE1E2 > 0 && (pE1 * pE2) > 0) {
+                pmi = Double.parseDouble(df.format(pmi));
+            }
         }
         return pmi;
     }
@@ -255,15 +279,15 @@ public class FeatureExtractor {
         Set<String> setUnion = new HashSet<String>(setValues);
         setUnion.addAll(setAll);
 
+
+        System.out.println(setInter);
+        System.out.println(setUnion);
         double ratio = 0.0;
 
         if (setUnion.size() > 0)
             ratio = (double) setInter.size() / (double) setUnion.size();
 
-        // System.out.println("ratio: " + ratio);
-
         DecimalFormat df = new DecimalFormat("#.###");
-        // DecimalFormat df = new DecimalFormat("#.########");
         ratio = Double.parseDouble(df.format(ratio));
 
         return ratio;
