@@ -23,10 +23,10 @@ public class AllTest {
             for (int fold = 1; fold < 2; fold++) {
 
                 //TODO: Modify Me to correct local path of '20000.new.first8000.shuffled.inter'!
-                List<Instance> trainingExamples = DataHandler.readTrainingInstances("data/jupiter/DataI/traincpy.inter", Constants.INPUT_TYPE_INTERMEDIATE);
+                List<Instance> trainingExamples = DataHandler.readTrainingInstances("data/jupiter/DataI/train.tmp.inter", Constants.INPUT_TYPE_INTERMEDIATE);
 
                 //TODO: Modify Me to correct local path of '20000.new.last12000.shuffled.inter'!
-                List<Instance> testingExamples = DataHandler.readTestingInstances("data/jupiter/DataI/testcpy.inter", Constants.INPUT_TYPE_INTERMEDIATE, DataHandler.READ_ALL);
+                List<Instance> testingExamples = DataHandler.readTestingInstances("data/jupiter/DataI/test.tmp.inter", Constants.INPUT_TYPE_INTERMEDIATE, DataHandler.READ_ONLY_WIKI);
 
                 AFRelationClassifier afRelationClassifier = new AFRelationClassifier();
                 Label judge = new Label();
@@ -153,6 +153,7 @@ public class AllTest {
         int i = 1;
 
         FeatureExtractor featureExtractor = new FeatureExtractor();
+        /*
         for (Instance instance : arrInputInstances) {
             ArrayList<Instance> arrOutputInstances = new ArrayList<Instance>();
 
@@ -168,6 +169,28 @@ public class AllTest {
             }
             i++;
         }
+        */
+        int count = 0;
+        int correct = 0;
+        for (Instance instance : arrInputInstances){
+            if (instance.relation != 3 && instance.relation != 0){
+                //continue;
+            }
+            String prediction = featureExtractor.settleEntity(instance.entity1, instance.entity2, new ArrayList<>(), new ArrayList<>());
+            int intPrediction = Integer.parseInt(prediction);
+            if (intPrediction == -1){
+                continue;
+            }
+            count ++;
+            if (intPrediction == instance.relation){
+                correct ++;
+            }
+            else {
+                System.out.println("[Wrong Answer]: " + instance.entity1 + "-" + instance.entity2 + " " + prediction);
+            }
+            System.out.println("Current Acc: " + (double)correct / (double)count);
+            System.out.println();
+        }
 
     }
 
@@ -175,8 +198,16 @@ public class AllTest {
         //simpleClassifierTest();
         //testWithConstraints();
         //featureExtractionTest();
+        //FeatureExtractor.mostMatch("A", "V-C");
+        //FeatureExtractor featureExtractor = new FeatureExtractor();
+        //System.out.println(featureExtractor._LLMSim.compare("automobile in 2002", "products in 2002"));
+        //System.out.println(featureExtractor._wordSim.compare("film", "movie").score);
+        //System.out.println(featureExtractor._wordSim.compare("actor", "actresses").score);
+        //System.out.println(WikiHandler.getContentByTitle("List_of_prizes,_medals_and_awards"));
+        //Instance i = new Instance("karthikai deepam", "hanukkah");
+        //System.out.println(featureExtractor.settleEntity(i.entity1, i.entity2, new ArrayList<>(), new ArrayList<>()));
         try {
-            generateIntermediateFile("data/jupiter/DataI/train", "data/jupiter/DataI/train.inter", 0);
+            generateIntermediateFile("data/jupiter/DataI/train", "data/jupiter/DataI/train.new.inter", 0);
         }
         catch (Exception e){
             e.printStackTrace();

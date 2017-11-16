@@ -17,6 +17,8 @@ public class Instance {
     public String entity1;
     public String entity2;
 
+    public String initialPrediction;
+
     public double ratio_TtlCat;
     public double ratio_CatTtl;
     public double ratio_CatCat;
@@ -88,6 +90,7 @@ public class Instance {
         this.additionalFeatures2[0] = 0;
         this.additionalFeatures2[1] = 0;
         this.additionalFeatures2[2] = 0;
+        this.initialPrediction = "-1";
     }
 
     /**
@@ -123,6 +126,7 @@ public class Instance {
         this.additionalFeatures2[0] = instance.additionalFeatures2[0];
         this.additionalFeatures2[1] = instance.additionalFeatures2[1];
         this.additionalFeatures2[2] = instance.additionalFeatures2[2];
+        this.initialPrediction = "-1";
     }
 
     /*

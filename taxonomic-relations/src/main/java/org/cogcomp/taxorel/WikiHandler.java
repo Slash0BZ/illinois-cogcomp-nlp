@@ -21,10 +21,10 @@ public class WikiHandler {
         try {
             String request = "";
             for (String q : queries){
-                request += q + " AND ";
+                request += q + " ";
             }
-            if (request.endsWith(" AND ")){
-                request = request.substring(0, request.length() - 5);
+            if (request.endsWith(" ")){
+                request = request.substring(0, request.length() - 1);
             }
             request = URLEncoder.encode(request, "UTF-8");
             URL url = new URL("https://en.wikipedia.org/w/api.php?action=query&list=search&srlimit=max&srsearch=" + request + "&format=json");
@@ -81,7 +81,88 @@ public class WikiHandler {
         return (Integer)jsonObject.getJSONObject("query").getJSONObject("searchinfo").get("totalhits");
     }
 
+    public static String getContentByTitle(String title){
+        String ret = "";
+        JSONObject jsonObject = null;
+        try {
+            String request = URLEncoder.encode(title, "UTF-8");
+            URL url = new URL("https://en.wikipedia.org/w/api.php?action=query&prop=revisions&rvprop=content&format=json&titles=" + request);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("Accept", "application/json");
+
+            if (conn.getResponseCode() != 200) {
+                throw new RuntimeException("Failed : HTTP error code : "
+                        + conn.getResponseCode());
+            }
+
+            BufferedReader br = new BufferedReader(new InputStreamReader(
+                    (conn.getInputStream())));
+
+            String output = br.readLine();
+            jsonObject = new JSONObject(output);
+            conn.disconnect();
+
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+        JSONObject result = jsonObject.getJSONObject("query").getJSONObject("pages");
+        String key = (String)result.keySet().toArray()[0];
+        if (key.equals("-1")){
+            return ret;
+        }
+        if (!result.getJSONObject(key).has("revisions")){
+            return ret;
+        }
+        JSONArray results = result.getJSONObject(key).getJSONArray("revisions");
+        for (int i = 0; i < results.length(); i++){
+            ret += (String)results.getJSONObject(i).get("*");
+        }
+        return ret;
+    }
+
     public static List<String> getParentCategory(String category){
+        JSONObject jsonObject = null;
+        try {
+            String request = URLEncoder.encode("Category:" + category, "UTF-8");
+            URL url = new URL("https://en.wikipedia.org/w/api.php?action=query&titles=" + request + "&prop=categories&format=json");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("Accept", "application/json");
+
+            if (conn.getResponseCode() != 200) {
+                throw new RuntimeException("Failed : HTTP error code : "
+                        + conn.getResponseCode());
+            }
+
+            BufferedReader br = new BufferedReader(new InputStreamReader(
+                    (conn.getInputStream())));
+
+            String output = br.readLine();
+            jsonObject = new JSONObject(output);
+            conn.disconnect();
+
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+        JSONObject result = jsonObject.getJSONObject("query").getJSONObject("pages");
+        String key = (String)result.keySet().toArray()[0];
+        List<String> ret = new ArrayList<>();
+        if (key.equals("-1")){
+            return ret;
+        }
+        if (!result.getJSONObject(key).has("categories")){
+            return ret;
+        }
+        JSONArray results = result.getJSONObject(key).getJSONArray("categories");
+        for (int i = 0; i < result.length(); i++){
+            String raw = (String)results.getJSONObject(i).get("title");
+            ret.add(raw.substring(9));
+        }
+        return ret;
+    }
+
+    public static List<String> getDaughtersCategory(String category){
         JSONObject jsonObject = null;
         try {
             String request = URLEncoder.encode("Category:" + category, "UTF-8");

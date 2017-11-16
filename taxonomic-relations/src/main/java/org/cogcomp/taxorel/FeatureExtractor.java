@@ -1,12 +1,18 @@
 package org.cogcomp.taxorel;
 
 import edu.illinois.cs.cogcomp.annotation.TextAnnotationBuilder;
+import edu.illinois.cs.cogcomp.config.SimConfigurator;
+import edu.illinois.cs.cogcomp.core.datastructures.Pair;
 import edu.illinois.cs.cogcomp.core.datastructures.ViewNames;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.Constituent;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.TextAnnotation;
+import edu.illinois.cs.cogcomp.core.utilities.configuration.ResourceManager;
 import edu.illinois.cs.cogcomp.nlp.tokenizer.StatefulTokenizer;
 import edu.illinois.cs.cogcomp.nlp.utility.TokenizerTextAnnotationBuilder;
 import edu.illinois.cs.cogcomp.pos.POSAnnotator;
+import edu.illinois.cs.cogcomp.sim.LLMStringSim;
+import edu.illinois.cs.cogcomp.sim.Metric;
+import edu.illinois.cs.cogcomp.sim.WordSim;
 import javatools.parsers.NounGroup;
 
 import java.text.DecimalFormat;
@@ -19,8 +25,10 @@ public class FeatureExtractor {
     POSAnnotator _posAnnotator = null;
     IdfManager _idfManager = null;
     StopWord _stopWord = null;
+    public WordSim _wordSim = null;
+    public Metric _LLMSim = null;
     int NUM_OF_DOCS = 5510659;
-    int K = 2;
+    int K = 5;
     public static final Set<String> INVALID_CATEGORY_HEAD = new HashSet<String>();
     static {
         INVALID_CATEGORY_HEAD.add("name");
@@ -41,6 +49,13 @@ public class FeatureExtractor {
         _posAnnotator = new POSAnnotator();
         _idfManager = new IdfManager();
         _stopWord = new StopWord(true);
+        try {
+            _wordSim = new WordSim(new SimConfigurator().getConfig(new ResourceManager("taxonomic-relations/src/main/config/configurations.properties")), "paragram");
+            _LLMSim = new LLMStringSim("taxonomic-relations/src/main/config/configurations.properties");
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     public void extractInstance(Instance instance){
@@ -49,6 +64,16 @@ public class FeatureExtractor {
             statusCode -= 1;
         }
         if (!WikiHandler.existsEntry(instance.entity2)){
+            statusCode -= 2;
+        }
+        List<ArticleQueryResult> A = new ArrayList<>();
+        List<ArticleQueryResult> B = new ArrayList<>();
+        instance.initialPrediction = settleEntity(instance.entity1, instance.entity2, A, B);
+        //getCategoryText(instance.entity1, instance.entity2, A, B);
+        if (A.size() == 0){
+            statusCode -= 1;
+        }
+        if (B.size() == 0){
             statusCode -= 2;
         }
         if (statusCode != 0){
@@ -61,11 +86,8 @@ public class FeatureExtractor {
             instance.ratio_CatCat = statusCode;
             return;
         }
-        instance.scorePmi_E1E2 = calculatePMI(instance.entity1, instance.entity2);
-        List<ArticleQueryResult> A = new ArrayList<>();
-        List<ArticleQueryResult> B = new ArrayList<>();
-        getCategoryText(instance.entity1, instance.entity2, A, B);
 
+        instance.scorePmi_E1E2 = calculatePMI(instance.entity1, instance.entity2);
         List<String> arrCategoriesA = new ArrayList<>();
         List<String> arrTitlesA = new ArrayList<>();
         List<String> arrAbstractsA = new ArrayList<>();
@@ -146,7 +168,6 @@ public class FeatureExtractor {
     }
 
     public void extractInfoToLists(List<ArticleQueryResult> searchResults, List<String> cats, List<String> titles, List<String> abs){
-        System.out.println("Getting " + searchResults.size() + " category tree information");
         for (ArticleQueryResult r : searchResults){
             cats.addAll(extractCategory(r));
             titles.add(r.title);
@@ -167,10 +188,10 @@ public class FeatureExtractor {
         for (String c : inputCats){
             NounGroup nounGroup = new NounGroup(c);
             if (INVALID_CATEGORY_HEAD.contains(nounGroup.head())) {
-                continue;
+                //continue;
             }
             if (exists.contains(c)){
-                continue;
+                //continue;
             }
             arrCats.add(c);
             exists.add(c);
@@ -349,8 +370,9 @@ public class FeatureExtractor {
         reqA.add(termA);
         reqB.add(termB);
         System.out.println("Getting titles combined");
-        List<String> titlesCombined = WikiHandler.getTitlesFromQuery(req);
-        titlesCombined = titlesCombined.subList(0, Math.min(100, titlesCombined.size()));
+        //List<String> titlesCombined = WikiHandler.getTitlesFromQuery(req);
+        //titlesCombined = titlesCombined.subList(0, Math.min(100, titlesCombined.size()));
+        List<String> titlesCombined = new ArrayList<>();
         System.out.println("Getting titles combined done.");
         System.out.println("Getting titles A");
         List<String> titlesA = WikiHandler.getTitlesFromQuery(reqA);
@@ -416,7 +438,7 @@ public class FeatureExtractor {
 
         int count = 0;
         for (String s : titleAIntersection){
-            candidatesA.add(s);
+            //candidatesA.add(s);
             count ++;
             if (count > 10){
                 break;
@@ -426,7 +448,7 @@ public class FeatureExtractor {
 
         count = 0;
         for (String s : titleBIntersection){
-            candidatesB.add(s);
+            //candidatesB.add(s);
             count ++;
             if (count > 10){
                 break;
@@ -451,6 +473,335 @@ public class FeatureExtractor {
         return null;
     }
 
+    public boolean mostMatch (String target, String test){
+        target = target.toLowerCase();
+        target = target.replace("-", " ");
+        test = test.toLowerCase();
+        test = test.replace("-", " ");
+        String[] testTokens = test.split("\\s+");
+        String[] targetTokens = target.split("\\s+");
+        int hit = 0;
+        for (String stest : testTokens){
+            if (target.contains(stest)){
+                hit ++;
+            }else {
+                for (String starget : targetTokens){
+                    if (_wordSim.compare(starget, stest).score >= 0.8){
+                        hit ++;
+                    }
+                }
+            }
+        }
+        if ((double)hit / (double)(targetTokens.length) > 0.5){
+            return true;
+        }
+        return false;
+    }
+
+    public String settleEntity(String termA, String termB, List<ArticleQueryResult> A, List<ArticleQueryResult> B){
+        List<String> reqA = new ArrayList<>();
+        List<String> reqB = new ArrayList<>();
+        List<String> reqAB = new ArrayList<>();
+        reqA.add(termA);
+        reqB.add(termB);
+        reqAB.add(termA);
+        reqAB.add(termB);
+        List<String> titlesARaw = WikiHandler.getTitlesFromQuery(reqA);
+        List<String> titlesBRaw = WikiHandler.getTitlesFromQuery(reqB);
+        List<String> titlesABRaw = WikiHandler.getTitlesFromQuery(reqAB);
+
+        List<String> titlesA = new ArrayList<>();
+        List<String> titlesB = new ArrayList<>();
+
+        for (String sa : titlesARaw){
+            if (mostMatch(termA, sa) && mostMatch(sa, termA) && !sa.contains("disambiguation")){
+                titlesA.add(sa);
+            }
+        }
+        for (String sb : titlesBRaw){
+            if (mostMatch(termB, sb) && mostMatch(sb, termB) && !sb.contains("disambiguation")){
+                titlesB.add(sb);
+            }
+        }
+        if (titlesA.size() == 0) {
+            titlesA = titlesARaw.subList(0, Math.min(3, titlesARaw.size()));
+        }
+        if (titlesB.size() == 0) {
+            titlesB = titlesBRaw.subList(0, Math.min(3, titlesBRaw.size()));
+        }
+        List<String> combinedChoices = titlesABRaw.subList(0, Math.min(3, titlesABRaw.size()));
+
+
+        String titleA = null;
+        String titleB = null;
+
+        boolean resolvedByHierarchy = false;
+
+        for (String sa : titlesA){
+            if (combinedChoices.contains(sa)){
+                titleA = sa;
+                titleB = titlesB.get(0);
+                resolvedByHierarchy = true;
+                break;
+            }
+        }
+        for (String sb : titlesB){
+            if (combinedChoices.contains(sb)){
+                titleB = sb;
+                titleA = titlesA.get(0);
+                resolvedByHierarchy = true;
+                break;
+            }
+        }
+
+        if (titlesA.size() == 1 && !resolvedByHierarchy){
+            titleA = titlesA.get(0);
+        }
+        if (titlesB.size() == 1 && !resolvedByHierarchy){
+            titleB = titlesB.get(0);
+        }
+
+        Map<Pair<String, String>, Integer> freqMap = new HashMap<>();
+        if (!resolvedByHierarchy && (titleA == null || titleB == null)){
+            for (String jointTitle : combinedChoices){
+                String content = WikiHandler.getContentByTitle(jointTitle);
+                for (String sa : titlesA){
+                    for (String sb : titlesB){
+                        if (content.contains(sa) && content.contains(sb)){
+                            Pair<String, String> cur = new Pair(sa, sb);
+                            if (freqMap.containsKey(cur)){
+                                freqMap.put(cur, freqMap.get(cur) + 1);
+                            }
+                            else {
+                                freqMap.put(cur, 1);
+                            }
+                        }
+                    }
+                }
+            }
+            if (freqMap.size() > 0){
+                freqMap = WikiHandler.sortByValue(freqMap);
+                titleA = ((Pair<String, String>)freqMap.keySet().toArray()[0]).getFirst();
+                titleB = ((Pair<String, String>)freqMap.keySet().toArray()[0]).getSecond();
+            }
+        }
+
+        if (titleA == null){
+            if (titlesA.size() > 0) {
+                titleA = titlesA.get(0);
+            }
+        }
+        if (titleB == null){
+            if (titlesB.size() > 0) {
+                titleB = titlesB.get(0);
+            }
+        }
+
+        if (titleA != null) {
+            A.add(WikiHandler.getInfoFromTitle(titleA));
+        }
+        if (titleB != null) {
+            B.add(WikiHandler.getInfoFromTitle(titleB));
+        }
+        System.out.println(termA + ": " + titlesA);
+        System.out.println(termA + "'s first choice: " + titleA);
+        System.out.println(termB + ": " + titlesB);
+        System.out.println(termB + "'s first choice: " + titleB);
+
+        return classifyTitles(titleA, titleB, termA, termB);
+    }
+
+    public String classifyTitles(String titleA, String titleB, String termA, String termB){
+        if (titleA == null || titleB == null){
+            return "-1";
+        }
+        List<String> catesA = WikiHandler.getInfoFromTitle(titleA).categories;
+        List<String> catesB = WikiHandler.getInfoFromTitle(titleB).categories;
+        Set<String> titleATmpSet = new HashSet<>();
+        Set<String> titleBTmpSet = new HashSet<>();
+        List<String> catesAFull = extract(catesA, 0, titleATmpSet);
+        System.out.println("A Cats: " + catesA);
+        List<String> catesBFull = extract(catesB, 0, titleBTmpSet);
+        System.out.println("B Cats: " + catesB);
+        /*
+        for (String ca : catesA){
+            if (catesB.contains(ca)){
+                return "3";
+            }
+        }
+        */
+        for (String ca : catesA){
+            for (String cb : catesBFull) {
+                if (ca.toLowerCase().equals(cb.toLowerCase()) || _wordSim.compare(ca.toLowerCase(), cb.toLowerCase()).score > 0.8){
+                    //return "1";
+                }
+            }
+        }
+        for (String sb : catesBFull){
+            String[] token = sb.split(" ");
+            List<String> tokenCandidates = new ArrayList<>();
+            for (String t : token){
+                tokenCandidates.add(t);
+            }
+            tokenCandidates.add(sb);
+
+            for (String t : tokenCandidates){
+                if (t.toLowerCase().equals(titleA.toLowerCase()) || t.toLowerCase().equals(termA.toLowerCase())){
+                    System.out.println("Reason (exact): " + t + " " + titleA + " " + termA);
+                    return "1";
+                }
+                if (_wordSim.compare(t.toLowerCase(), titleA.toLowerCase()).score > 0.6 ||
+                        _wordSim.compare(t.toLowerCase(), termA.toLowerCase()).score > 0.6){
+                    //System.out.println("Reason (similarity): " + t + " " + titleA + " " + termA);
+                    return "1";
+                }
+            }
+
+            if (_LLMSim.compare(sb, termA).score > 0.9 || _LLMSim.compare(sb, titleA).score > 0.9){
+                return "1";
+            }
+        }
+        for (String cb : catesB){
+            for (String ca : catesAFull) {
+                if (ca.toLowerCase().equals(cb.toLowerCase()) || _wordSim.compare(ca.toLowerCase(), cb.toLowerCase()).score > 0.8){
+                    //return "2";
+                }
+            }
+        }
+        for (String sa : catesAFull){
+            String[] token = sa.split(" ");
+            List<String> tokenCandidates = new ArrayList<>();
+            for (String t : token){
+                tokenCandidates.add(t);
+            }
+            tokenCandidates.add(sa);
+            for (String t : tokenCandidates){
+                if (t.toLowerCase().equals(titleB.toLowerCase())  || t.toLowerCase().equals(termB.toLowerCase())){
+                    System.out.println("Reason (exact): " + t + " " + titleB + " " + termB);
+                    return "2";
+                }
+                if (_wordSim.compare(t.toLowerCase(), titleB.toLowerCase()).score > 0.6 ||
+                        _wordSim.compare(t.toLowerCase(), termB.toLowerCase()).score > 0.6){
+                    System.out.println("Reason (similarity): " + t + " " + titleB + " " + termB);
+                    return "2";
+                }
+            }
+            if (_LLMSim.compare(sa, termB).score > 0.9 || _LLMSim.compare(sa, titleB).score > 0.9){
+                return "2";
+            }
+        }
+
+        List<String> tokenCatA = new ArrayList<>();
+        List<String> tokenCatB = new ArrayList<>();
+        for (String s : catesA){
+            s = s.toLowerCase();
+            String[] token = s.split(" ");
+            for (String t : token){
+                tokenCatA.add(t);
+            }
+        }
+        for (String s : catesB){
+            s = s.toLowerCase();
+            String[] token = s.split(" ");
+            for (String t : token){
+                tokenCatB.add(t);
+            }
+        }
+        double cosScore = 0.0;
+        try {
+            cosScore = getCosSim(tokenCatA, tokenCatB);
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+        List<Double> LLMScores = getLLMSim(catesA, catesB);
+        System.out.println("CosScore: " + cosScore);
+        System.out.println("LLMScore: " + LLMScores);
+
+        for (String ca : catesAFull){
+            if (catesBFull.contains(ca)){
+                //return "3";
+            }
+        }
+        if (LLMScores.get(0) > 0.8){
+            return "3";
+        }
+
+        return "0";
+    }
+
+    public List<String> getFilteredNouns(List<String> inputs){
+        List<String> ret = new ArrayList<>();
+        for (String i : inputs) {
+            TextAnnotationBuilder tab;
+            boolean splitOnHyphens = false;
+            tab = new TokenizerTextAnnotationBuilder(new StatefulTokenizer(splitOnHyphens));
+            TextAnnotation ta = tab.createTextAnnotation("", "", i);
+            try {
+                ta.addView(_posAnnotator);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            String cur = "";
+            for (Constituent c : ta.getView(ViewNames.POS)) {
+                if (c.getLabel().startsWith("NN") || c.getLabel().startsWith("IN")) {
+                    cur += c.toString() + " ";
+                }
+            }
+            if (cur.length() > 0){
+                cur = cur.substring(0, cur.length() - 1);
+            }
+            ret.add(cur);
+        }
+        return ret;
+    }
+
+    public List<Double> getLLMSim(List<String> catsA, List<String> catsB){
+        List<Double> ret = new ArrayList<>();
+        double maxScore = 0.0;
+        String maxString = "";
+        double avgScoreA = 0.0;
+        double totalScoreA = 0.0;
+        double avgScoreB = 0.0;
+        double totalScoreB = 0.0;
+        catsA = getFilteredNouns(catsA);
+        catsB = getFilteredNouns(catsB);
+        for (String ca : catsA){
+            double caMax = 0.0;
+            for (String cb : catsB){
+                double cur = _LLMSim.compare(ca, cb).score;
+                if (cur > maxScore){
+                    maxScore = cur;
+                    maxString = ca + " " + cb;
+                }
+                if (cur > caMax){
+                    caMax = cur;
+                }
+            }
+            avgScoreA += caMax;
+            totalScoreA += caMax;
+        }
+        avgScoreA /= (double)catsA.size();
+        for (String cb : catsB){
+            double cbMax = 0.0;
+            for (String ca : catsA){
+                double cur = _LLMSim.compare(ca, cb).score;
+                if (cur > cbMax){
+                    cbMax = cur;
+                }
+            }
+            avgScoreB += cbMax;
+            totalScoreB += cbMax;
+        }
+        avgScoreB /= (double)catsB.size();
+        ret.add(maxScore);
+        ret.add(avgScoreA);
+        ret.add(avgScoreB);
+        ret.add(totalScoreA);
+        ret.add(totalScoreB);
+        System.out.println("MAXSTRING: " + maxString);
+        return ret;
+    }
     private Map<String, Double> scoringToken(Map<String, Integer> histogram) {
         Map<String, Double> scoredFreq = new HashMap<>();
         Set<String> keySet = histogram.keySet();
