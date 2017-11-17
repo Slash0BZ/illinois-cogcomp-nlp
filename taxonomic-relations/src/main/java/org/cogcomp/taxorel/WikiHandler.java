@@ -155,7 +155,7 @@ public class WikiHandler {
             return ret;
         }
         JSONArray results = result.getJSONObject(key).getJSONArray("categories");
-        for (int i = 0; i < result.length(); i++){
+        for (int i = 0; i < results.length(); i++){
             String raw = (String)results.getJSONObject(i).get("title");
             ret.add(raw.substring(9));
         }

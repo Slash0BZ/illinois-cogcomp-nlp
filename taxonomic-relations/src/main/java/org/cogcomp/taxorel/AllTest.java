@@ -173,10 +173,15 @@ public class AllTest {
         int count = 0;
         int correct = 0;
         for (Instance instance : arrInputInstances){
+            i++;
             if (instance.relation != 3 && instance.relation != 0){
                 //continue;
             }
+            if (i < startIdx){
+                continue;
+            }
             String prediction = featureExtractor.settleEntity(instance.entity1, instance.entity2, new ArrayList<>(), new ArrayList<>());
+
             int intPrediction = Integer.parseInt(prediction);
             if (intPrediction == -1){
                 continue;
@@ -186,10 +191,16 @@ public class AllTest {
                 correct ++;
             }
             else {
-                System.out.println("[Wrong Answer]: " + instance.entity1 + "-" + instance.entity2 + " " + prediction);
+                System.out.println("[WRONG]: " + instance.entity1 + "-" + instance.entity2 + " " + prediction);
+                ArrayList<Instance> arrOutputInstances = new ArrayList<Instance>();
+                arrOutputInstances.add(instance);
+                ArrayList<String> arrStringInstances = DataHandler.makeStringInstances(
+                        arrOutputInstances, Constants.INPUT_TYPE_INTERMEDIATE);
+                //DataHandler.writeLines(arrStringInstances, "data/jupiter/DataI/train.new.errors");
             }
             System.out.println("Current Acc: " + (double)correct / (double)count);
             System.out.println();
+
         }
 
     }
@@ -199,15 +210,19 @@ public class AllTest {
         //testWithConstraints();
         //featureExtractionTest();
         //FeatureExtractor.mostMatch("A", "V-C");
-        //FeatureExtractor featureExtractor = new FeatureExtractor();
-        //System.out.println(featureExtractor._LLMSim.compare("automobile in 2002", "products in 2002"));
-        //System.out.println(featureExtractor._wordSim.compare("film", "movie").score);
+
+        FeatureExtractor featureExtractor = new FeatureExtractor();
+        //System.out.println(featureExtractor._LLMSim.compare("City", "Capital"));
+        //System.out.println(English.plural("actors", 2));
+        //NameConverter nameConverter = new DefaultNameConverter();
+        //System.out.println(featureExtractor._wordSim.compare("countries", "country").score);
         //System.out.println(featureExtractor._wordSim.compare("actor", "actresses").score);
-        //System.out.println(WikiHandler.getContentByTitle("List_of_prizes,_medals_and_awards"));
-        //Instance i = new Instance("karthikai deepam", "hanukkah");
+        //System.out.println(WikiHandler.getContentByTitle("List_of_rivers_by_discharge"));
+        System.out.println(WikiHandler.getParentCategory("Capitals"));
+        //Instance i = new Instance("bombardier crj900", "ask.com");
         //System.out.println(featureExtractor.settleEntity(i.entity1, i.entity2, new ArrayList<>(), new ArrayList<>()));
         try {
-            generateIntermediateFile("data/jupiter/DataI/train", "data/jupiter/DataI/train.new.inter", 0);
+            generateIntermediateFile("data/jupiter/DataI/train.investigate.error", "data/jupiter/DataI/train.new.2.inter", 0);
         }
         catch (Exception e){
             e.printStackTrace();

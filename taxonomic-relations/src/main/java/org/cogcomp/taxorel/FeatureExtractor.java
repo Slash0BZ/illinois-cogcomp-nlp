@@ -12,8 +12,11 @@ import edu.illinois.cs.cogcomp.nlp.utility.TokenizerTextAnnotationBuilder;
 import edu.illinois.cs.cogcomp.pos.POSAnnotator;
 import edu.illinois.cs.cogcomp.sim.LLMStringSim;
 import edu.illinois.cs.cogcomp.sim.Metric;
+import edu.illinois.cs.cogcomp.sim.MetricResponse;
 import edu.illinois.cs.cogcomp.sim.WordSim;
 import javatools.parsers.NounGroup;
+import org.jibx.schema.codegen.extend.DefaultNameConverter;
+import org.jibx.schema.codegen.extend.NameConverter;
 
 import java.text.DecimalFormat;
 import java.util.*;
@@ -27,9 +30,12 @@ public class FeatureExtractor {
     StopWord _stopWord = null;
     public WordSim _wordSim = null;
     public Metric _LLMSim = null;
+    public NameConverter _nameConverter = null;
     int NUM_OF_DOCS = 5510659;
-    int K = 5;
+    int K = 3;
     public static final Set<String> INVALID_CATEGORY_HEAD = new HashSet<String>();
+    public static String[] skipWords = {"establishments", "births", "deaths", "stub", "history", "family", "person"};
+    List<String> skipWordList;
     static {
         INVALID_CATEGORY_HEAD.add("name");
         INVALID_CATEGORY_HEAD.add("surname");
@@ -49,6 +55,7 @@ public class FeatureExtractor {
         _posAnnotator = new POSAnnotator();
         _idfManager = new IdfManager();
         _stopWord = new StopWord(true);
+        _nameConverter = new DefaultNameConverter();
         try {
             _wordSim = new WordSim(new SimConfigurator().getConfig(new ResourceManager("taxonomic-relations/src/main/config/configurations.properties")), "paragram");
             _LLMSim = new LLMStringSim("taxonomic-relations/src/main/config/configurations.properties");
@@ -56,6 +63,7 @@ public class FeatureExtractor {
         catch (Exception e){
             e.printStackTrace();
         }
+        skipWordList = new ArrayList<>(Arrays.asList(skipWords));
     }
 
     public void extractInstance(Instance instance){
@@ -476,8 +484,10 @@ public class FeatureExtractor {
     public boolean mostMatch (String target, String test){
         target = target.toLowerCase();
         target = target.replace("-", " ");
+        target = target.replace(",", "");
         test = test.toLowerCase();
         test = test.replace("-", " ");
+        test = test.replace(",", "");
         String[] testTokens = test.split("\\s+");
         String[] targetTokens = target.split("\\s+");
         int hit = 0;
@@ -492,7 +502,7 @@ public class FeatureExtractor {
                 }
             }
         }
-        if ((double)hit / (double)(targetTokens.length) > 0.5){
+        if ((double)hit / (double)(targetTokens.length) >= 0.5){
             return true;
         }
         return false;
@@ -514,21 +524,44 @@ public class FeatureExtractor {
         List<String> titlesB = new ArrayList<>();
 
         for (String sa : titlesARaw){
-            if (mostMatch(termA, sa) && mostMatch(sa, termA) && !sa.contains("disambiguation")){
-                titlesA.add(sa);
+            String temp = sa.replaceAll("\\(.*\\)", "");
+            if (mostMatch(termA, temp) && mostMatch(temp, termA) && !sa.contains("disambiguation")){
+                boolean add = true;
+                for (String c : WikiHandler.getInfoFromTitle(sa).categories){
+                    if (c.toLowerCase().contains("disambiguation")){
+                        add = false;
+                    }
+                }
+                if (add) {
+                    titlesA.add(sa);
+                }
             }
         }
         for (String sb : titlesBRaw){
-            if (mostMatch(termB, sb) && mostMatch(sb, termB) && !sb.contains("disambiguation")){
-                titlesB.add(sb);
+            String temp = sb.replaceAll("\\(.*\\)", "");
+            if (mostMatch(termB, temp) && mostMatch(temp, termB) && !sb.contains("disambiguation")){
+                boolean add = true;
+                for (String c : WikiHandler.getInfoFromTitle(sb).categories){
+                    if (c.toLowerCase().contains("disambiguation")){
+                        add = false;
+                    }
+                }
+                if (add) {
+                    titlesB.add(sb);
+                }
             }
         }
+
         if (titlesA.size() == 0) {
             titlesA = titlesARaw.subList(0, Math.min(3, titlesARaw.size()));
         }
+        titlesA = titlesA.subList(0, Math.min(3, titlesA.size()));
         if (titlesB.size() == 0) {
+            System.out.println("Added by insufficient candidates");
             titlesB = titlesBRaw.subList(0, Math.min(3, titlesBRaw.size()));
         }
+        titlesB = titlesB.subList(0, Math.min(3, titlesB.size()));
+
         List<String> combinedChoices = titlesABRaw.subList(0, Math.min(3, titlesABRaw.size()));
 
 
@@ -567,7 +600,7 @@ public class FeatureExtractor {
                 String content = WikiHandler.getContentByTitle(jointTitle);
                 for (String sa : titlesA){
                     for (String sb : titlesB){
-                        if (content.contains(sa) && content.contains(sb)){
+                        if ((content.contains("[" + sa + "|") || content.contains("[" + sa + "]")) && (content.contains("[" + sb + "|") || content.contains("[" + sb + "]"))){
                             Pair<String, String> cur = new Pair(sa, sb);
                             if (freqMap.containsKey(cur)){
                                 freqMap.put(cur, freqMap.get(cur) + 1);
@@ -596,6 +629,9 @@ public class FeatureExtractor {
                 titleB = titlesB.get(0);
             }
         }
+        System.out.println(termA + ": " + titleA);
+        System.out.println(termB + ": " + titleB);
+        System.out.println();
 
         if (titleA != null) {
             A.add(WikiHandler.getInfoFromTitle(titleA));
@@ -609,6 +645,7 @@ public class FeatureExtractor {
         System.out.println(termB + "'s first choice: " + titleB);
 
         return classifyTitles(titleA, titleB, termA, termB);
+
     }
 
     public String classifyTitles(String titleA, String titleB, String termA, String termB){
@@ -617,117 +654,120 @@ public class FeatureExtractor {
         }
         List<String> catesA = WikiHandler.getInfoFromTitle(titleA).categories;
         List<String> catesB = WikiHandler.getInfoFromTitle(titleB).categories;
+        if (catesA.size() == 1){
+            catesA.addAll(WikiHandler.getParentCategory(catesA.get(0)));
+        }
+        if (catesB.size() == 1){
+            catesB.addAll(WikiHandler.getParentCategory(catesB.get(0)));
+        }
         Set<String> titleATmpSet = new HashSet<>();
         Set<String> titleBTmpSet = new HashSet<>();
         List<String> catesAFull = extract(catesA, 0, titleATmpSet);
         System.out.println("A Cats: " + catesA);
         List<String> catesBFull = extract(catesB, 0, titleBTmpSet);
         System.out.println("B Cats: " + catesB);
-        /*
-        for (String ca : catesA){
-            if (catesB.contains(ca)){
-                return "3";
-            }
-        }
-        */
-        for (String ca : catesA){
-            for (String cb : catesBFull) {
-                if (ca.toLowerCase().equals(cb.toLowerCase()) || _wordSim.compare(ca.toLowerCase(), cb.toLowerCase()).score > 0.8){
-                    //return "1";
-                }
-            }
-        }
-        for (String sb : catesBFull){
-            String[] token = sb.split(" ");
-            List<String> tokenCandidates = new ArrayList<>();
-            for (String t : token){
-                tokenCandidates.add(t);
-            }
-            tokenCandidates.add(sb);
 
-            for (String t : tokenCandidates){
-                if (t.toLowerCase().equals(titleA.toLowerCase()) || t.toLowerCase().equals(termA.toLowerCase())){
-                    System.out.println("Reason (exact): " + t + " " + titleA + " " + termA);
-                    return "1";
-                }
-                if (_wordSim.compare(t.toLowerCase(), titleA.toLowerCase()).score > 0.6 ||
-                        _wordSim.compare(t.toLowerCase(), termA.toLowerCase()).score > 0.6){
-                    //System.out.println("Reason (similarity): " + t + " " + titleA + " " + termA);
-                    return "1";
-                }
-            }
-
-            if (_LLMSim.compare(sb, termA).score > 0.9 || _LLMSim.compare(sb, titleA).score > 0.9){
-                return "1";
-            }
-        }
-        for (String cb : catesB){
-            for (String ca : catesAFull) {
-                if (ca.toLowerCase().equals(cb.toLowerCase()) || _wordSim.compare(ca.toLowerCase(), cb.toLowerCase()).score > 0.8){
-                    //return "2";
-                }
-            }
-        }
-        for (String sa : catesAFull){
-            String[] token = sa.split(" ");
-            List<String> tokenCandidates = new ArrayList<>();
-            for (String t : token){
-                tokenCandidates.add(t);
-            }
-            tokenCandidates.add(sa);
-            for (String t : tokenCandidates){
-                if (t.toLowerCase().equals(titleB.toLowerCase())  || t.toLowerCase().equals(termB.toLowerCase())){
-                    System.out.println("Reason (exact): " + t + " " + titleB + " " + termB);
-                    return "2";
-                }
-                if (_wordSim.compare(t.toLowerCase(), titleB.toLowerCase()).score > 0.6 ||
-                        _wordSim.compare(t.toLowerCase(), termB.toLowerCase()).score > 0.6){
-                    System.out.println("Reason (similarity): " + t + " " + titleB + " " + termB);
-                    return "2";
-                }
-            }
-            if (_LLMSim.compare(sa, termB).score > 0.9 || _LLMSim.compare(sa, titleB).score > 0.9){
-                return "2";
+        List<String> detA = new ArrayList<>();
+        for (String ca : getFilteredNouns(catesAFull)){
+            double scoreTerm = Math.max(getLLMScore(ca, termA), getLLMScore(termA, ca));
+            double scoreTitle = Math.max(getLLMScore(ca, titleA), getLLMScore(titleA, ca));;
+            if (scoreTerm < 0.8 && scoreTitle < 0.8){
+                detA.add(ca);
             }
         }
 
-        List<String> tokenCatA = new ArrayList<>();
-        List<String> tokenCatB = new ArrayList<>();
-        for (String s : catesA){
-            s = s.toLowerCase();
-            String[] token = s.split(" ");
-            for (String t : token){
-                tokenCatA.add(t);
+        List<String> detB = new ArrayList<>();
+        for (String cb : getFilteredNouns(catesBFull)){
+            double scoreTerm = Math.max(getLLMScore(cb, termB), getLLMScore(termB, cb));
+            double scoreTitle = Math.max(getLLMScore(cb, titleB), getLLMScore(titleB, cb));;
+            if (scoreTerm < 0.8 && scoreTitle < 0.8){
+                detB.add(cb);
             }
         }
-        for (String s : catesB){
-            s = s.toLowerCase();
-            String[] token = s.split(" ");
-            for (String t : token){
-                tokenCatB.add(t);
+
+        System.out.println("FullA: " + catesAFull);
+        System.out.println("detA: " + detA);
+
+        boolean isTwo = false;
+        boolean isOne = false;
+
+        for (String sb : detB){
+            sb = depluralizePhrase(sb);
+            MetricResponse LLMResponse = _LLMSim.compare(sb, termA);
+            double sb_termA = 0.0;
+            if (LLMResponse != null) {
+                sb_termA = LLMResponse.score;
+            }
+            LLMResponse = _LLMSim.compare(sb, titleA);
+            double sb_titleA = 0.0;
+            if (LLMResponse != null) {
+                sb_titleA = LLMResponse.score;
+            }
+            if (sb_termA > 0.8 || sb_titleA > 0.8){
+                System.out.println("Reason (similarity): " + sb + ", " + titleB + ", " + termB);
+                isOne = true;
             }
         }
-        double cosScore = 0.0;
-        try {
-            cosScore = getCosSim(tokenCatA, tokenCatB);
+
+        for (String sa : detA){
+            sa = depluralizePhrase(sa);
+            MetricResponse LLMResponse = _LLMSim.compare(sa, termB);
+            double sa_termB = 0.0;
+            if (LLMResponse != null) {
+                sa_termB = LLMResponse.score;
+            }
+            LLMResponse = _LLMSim.compare(sa, titleB);
+            double sa_titleB = 0.0;
+            if (LLMResponse != null) {
+                sa_titleB = LLMResponse.score;
+            }
+            if (sa_termB > 0.8 || sa_titleB > 0.8){
+                System.out.println("Reason (similarity): " + sa + ", " + titleB + ", " + termB);
+                isTwo = true;
+            }
         }
-        catch (Exception e){
-            e.printStackTrace();
+
+        if (isOne && !isTwo){
+            return "1";
         }
-        List<Double> LLMScores = getLLMSim(catesA, catesB);
-        System.out.println("CosScore: " + cosScore);
+        if (!isOne && isTwo){
+            return "2";
+        }
+        List<String> cateALv2 = new ArrayList<>();
+        List<String> cateBLv2 = new ArrayList<>();
+        for (String c : catesA){
+            cateALv2.addAll(WikiHandler.getParentCategory(c));
+        }
+        cateALv2.addAll(catesA);
+
+        for (String c : catesB){
+            cateBLv2.addAll(WikiHandler.getParentCategory(c));
+        }
+        cateBLv2.addAll(catesB);
+
+        List<Double> LLMScores = getLLMSim(cateALv2, cateBLv2);
+        System.out.println("Filtered A: " + getFilteredNouns(catesAFull));
         System.out.println("LLMScore: " + LLMScores);
+        System.out.println(titleA + ": " + cateALv2);
+        System.out.println(titleB + ": " + cateBLv2);
 
-        for (String ca : catesAFull){
-            if (catesBFull.contains(ca)){
-                //return "3";
-            }
-        }
         if (LLMScores.get(0) > 0.8){
             return "3";
         }
 
         return "0";
+    }
+
+    public String depluralizePhrase(String input){
+        String[] token = input.split(" ");
+        String ret = "";
+        for (String t : token){
+            ret += _nameConverter.depluralize(t) + " ";
+        }
+        if (ret.length() > 0){
+            ret = ret.substring(0, ret.length() - 1);
+        }
+        return ret;
     }
 
     public List<String> getFilteredNouns(List<String> inputs){
@@ -744,12 +784,25 @@ public class FeatureExtractor {
             }
             String cur = "";
             for (Constituent c : ta.getView(ViewNames.POS)) {
-                if (c.getLabel().startsWith("NN") || c.getLabel().startsWith("IN")) {
+                //if (c.getLabel().startsWith("NN") || c.getLabel().startsWith("IN")) {
+                if (c.getLabel().startsWith("IN")){
+                    break;
+                }
+                if (c.getLabel().startsWith("NN")) {
                     cur += c.toString() + " ";
                 }
             }
             if (cur.length() > 0){
                 cur = cur.substring(0, cur.length() - 1);
+            }
+            boolean skipCur = false;
+            for (String skip: skipWordList){
+                if (cur.toLowerCase().contains(skip.toLowerCase())){
+                    skipCur = true;
+                }
+            }
+            if (skipCur){
+                continue;
             }
             ret.add(cur);
         }
@@ -769,7 +822,11 @@ public class FeatureExtractor {
         for (String ca : catsA){
             double caMax = 0.0;
             for (String cb : catsB){
-                double cur = _LLMSim.compare(ca, cb).score;
+                MetricResponse LLMResponse = _LLMSim.compare(ca, cb);
+                double cur = 0.0;
+                if (LLMResponse != null) {
+                    cur = _LLMSim.compare(ca, cb).score;
+                }
                 if (cur > maxScore){
                     maxScore = cur;
                     maxString = ca + " " + cb;
@@ -785,7 +842,11 @@ public class FeatureExtractor {
         for (String cb : catsB){
             double cbMax = 0.0;
             for (String ca : catsA){
-                double cur = _LLMSim.compare(ca, cb).score;
+                MetricResponse LLMResponse = _LLMSim.compare(ca, cb);
+                double cur = 0.0;
+                if (LLMResponse != null) {
+                    cur = _LLMSim.compare(ca, cb).score;
+                }
                 if (cur > cbMax){
                     cbMax = cur;
                 }
@@ -825,5 +886,13 @@ public class FeatureExtractor {
             ret.add(s);
         }
         return ret;
+    }
+
+    public double getLLMScore(String a, String b){
+        MetricResponse m = _LLMSim.compare(a, b);
+        if (m != null){
+            return m.score;
+        }
+        return 0.0;
     }
 }
