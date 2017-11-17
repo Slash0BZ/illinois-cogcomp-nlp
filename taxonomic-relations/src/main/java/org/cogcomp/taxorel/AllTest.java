@@ -174,9 +174,6 @@ public class AllTest {
         int correct = 0;
         for (Instance instance : arrInputInstances){
             i++;
-            if (instance.relation != 3 && instance.relation != 0){
-                //continue;
-            }
             if (i < startIdx){
                 continue;
             }
@@ -196,7 +193,7 @@ public class AllTest {
                 arrOutputInstances.add(instance);
                 ArrayList<String> arrStringInstances = DataHandler.makeStringInstances(
                         arrOutputInstances, Constants.INPUT_TYPE_INTERMEDIATE);
-                //DataHandler.writeLines(arrStringInstances, "data/jupiter/DataI/train.new.errors");
+                DataHandler.writeLines(arrStringInstances, "data/jupiter/DataI/train.new.afterchanges.errors");
             }
             System.out.println("Current Acc: " + (double)correct / (double)count);
             System.out.println();
@@ -212,17 +209,21 @@ public class AllTest {
         //FeatureExtractor.mostMatch("A", "V-C");
 
         FeatureExtractor featureExtractor = new FeatureExtractor();
-        //System.out.println(featureExtractor._LLMSim.compare("City", "Capital"));
+        System.out.println(featureExtractor._LLMSim.compare("Gnosticism", "Platonism"));
         //System.out.println(English.plural("actors", 2));
         //NameConverter nameConverter = new DefaultNameConverter();
         //System.out.println(featureExtractor._wordSim.compare("countries", "country").score);
         //System.out.println(featureExtractor._wordSim.compare("actor", "actresses").score);
         //System.out.println(WikiHandler.getContentByTitle("List_of_rivers_by_discharge"));
-        System.out.println(WikiHandler.getParentCategory("Capitals"));
-        //Instance i = new Instance("bombardier crj900", "ask.com");
+        //System.out.println(WikiHandler.getParentCategory("Capitals"));
+        //System.out.println(WikiHandler.getInfoFromTitle("Marguerite Zorach").categories);
+        //List<String> test = new ArrayList<>();
+        //test.add("Multiple myeloma");
+        //System.out.println(featureExtractor.extract(test, 0, 0));
+        Instance i = new Instance("newspaper", "news frankfurt");
         //System.out.println(featureExtractor.settleEntity(i.entity1, i.entity2, new ArrayList<>(), new ArrayList<>()));
         try {
-            generateIntermediateFile("data/jupiter/DataI/train.investigate.error", "data/jupiter/DataI/train.new.2.inter", 0);
+            generateIntermediateFile("data/jupiter/DataI/train", "data/jupiter/DataI/train.new.2.inter", 430);
         }
         catch (Exception e){
             e.printStackTrace();

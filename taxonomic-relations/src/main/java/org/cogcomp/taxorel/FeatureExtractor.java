@@ -32,9 +32,9 @@ public class FeatureExtractor {
     public Metric _LLMSim = null;
     public NameConverter _nameConverter = null;
     int NUM_OF_DOCS = 5510659;
-    int K = 3;
+    int K = 2;
     public static final Set<String> INVALID_CATEGORY_HEAD = new HashSet<String>();
-    public static String[] skipWords = {"establishments", "births", "deaths", "stub", "history", "family", "person"};
+    public static String[] skipWords = {"establishments", "births", "deaths", "stub", "history", "family", "person", "people", "events"};
     List<String> skipWordList;
     static {
         INVALID_CATEGORY_HEAD.add("name");
@@ -185,25 +185,26 @@ public class FeatureExtractor {
 
     public List<String> extractCategory(ArticleQueryResult r){
         Set<String> exists = new HashSet<>();
-        return extract(r.categories,  0, exists);
+        return extract(r.categories,  0, 0);
     }
 
-    public List<String> extract(List<String> inputCats, int level, Set<String> exists){
+    public List<String> extract(List<String> inputCats, int level, int counter){
         ArrayList<String> arrCats = new ArrayList<String>();
         if (level > K){
             return arrCats;
         }
+        if (counter > 10){
+            return arrCats;
+        }
         for (String c : inputCats){
-            NounGroup nounGroup = new NounGroup(c);
-            if (INVALID_CATEGORY_HEAD.contains(nounGroup.head())) {
-                //continue;
-            }
-            if (exists.contains(c)){
-                //continue;
-            }
             arrCats.add(c);
-            exists.add(c);
-            arrCats.addAll(extract(WikiHandler.getParentCategory(c), level + 1, exists));
+            List<String> newExtracts = WikiHandler.getParentCategory(c);
+            if (newExtracts.size() == 1){
+                arrCats.addAll(extract(newExtracts, level, counter + 1));
+            }
+            else {
+                arrCats.addAll(extract(newExtracts, level + 1, counter + 1));
+            }
         }
         return arrCats;
     }
@@ -660,11 +661,10 @@ public class FeatureExtractor {
         if (catesB.size() == 1){
             catesB.addAll(WikiHandler.getParentCategory(catesB.get(0)));
         }
-        Set<String> titleATmpSet = new HashSet<>();
-        Set<String> titleBTmpSet = new HashSet<>();
-        List<String> catesAFull = extract(catesA, 0, titleATmpSet);
+
+        List<String> catesAFull = extract(catesA, 0, 0);
         System.out.println("A Cats: " + catesA);
-        List<String> catesBFull = extract(catesB, 0, titleBTmpSet);
+        List<String> catesBFull = extract(catesB, 0, 0);
         System.out.println("B Cats: " + catesB);
 
         List<String> detA = new ArrayList<>();
@@ -676,6 +676,7 @@ public class FeatureExtractor {
             }
         }
 
+        System.out.println("DETA: " + detA);
         List<String> detB = new ArrayList<>();
         for (String cb : getFilteredNouns(catesBFull)){
             double scoreTerm = Math.max(getLLMScore(cb, termB), getLLMScore(termB, cb));
@@ -685,45 +686,40 @@ public class FeatureExtractor {
             }
         }
 
-        System.out.println("FullA: " + catesAFull);
-        System.out.println("detA: " + detA);
+        System.out.println("DETB: " + detB);
 
         boolean isTwo = false;
         boolean isOne = false;
 
+        List<String> titleSetA = new ArrayList<>();
+        titleSetA.add(titleA);
+        titleSetA.add(termA);
+
+        List<String> titleSetB = new ArrayList<>();
+        titleSetB.add(titleB);
+        titleSetB.add(termB);
+
         for (String sb : detB){
             sb = depluralizePhrase(sb);
-            MetricResponse LLMResponse = _LLMSim.compare(sb, termA);
-            double sb_termA = 0.0;
-            if (LLMResponse != null) {
-                sb_termA = LLMResponse.score;
-            }
-            LLMResponse = _LLMSim.compare(sb, titleA);
-            double sb_titleA = 0.0;
-            if (LLMResponse != null) {
-                sb_titleA = LLMResponse.score;
-            }
-            if (sb_termA > 0.8 || sb_titleA > 0.8){
-                System.out.println("Reason (similarity): " + sb + ", " + titleB + ", " + termB);
-                isOne = true;
+            for (String tsa : titleSetA){
+                tsa = depluralizePhrase(tsa);
+                if (getLLMScore(sb, tsa) > 0.85){
+                    System.out.println("Reason for 1: " + sb + " " + tsa);
+                    isOne = true;
+                    break;
+                }
             }
         }
 
         for (String sa : detA){
             sa = depluralizePhrase(sa);
-            MetricResponse LLMResponse = _LLMSim.compare(sa, termB);
-            double sa_termB = 0.0;
-            if (LLMResponse != null) {
-                sa_termB = LLMResponse.score;
-            }
-            LLMResponse = _LLMSim.compare(sa, titleB);
-            double sa_titleB = 0.0;
-            if (LLMResponse != null) {
-                sa_titleB = LLMResponse.score;
-            }
-            if (sa_termB > 0.8 || sa_titleB > 0.8){
-                System.out.println("Reason (similarity): " + sa + ", " + titleB + ", " + termB);
-                isTwo = true;
+            for (String tsb : titleSetB){
+                tsb = depluralizePhrase(tsb);
+                if (getLLMScore(sa, tsb) > 0.85){
+                    System.out.println("Reason for 2: " + sa + " " + tsb);
+                    isTwo = true;
+                    break;
+                }
             }
         }
 
@@ -746,7 +742,7 @@ public class FeatureExtractor {
         cateBLv2.addAll(catesB);
 
         List<Double> LLMScores = getLLMSim(cateALv2, cateBLv2);
-        System.out.println("Filtered A: " + getFilteredNouns(catesAFull));
+        System.out.println("Filtered A: " + getFilteredNouns(catesA));
         System.out.println("LLMScore: " + LLMScores);
         System.out.println(titleA + ": " + cateALv2);
         System.out.println(titleB + ": " + cateBLv2);

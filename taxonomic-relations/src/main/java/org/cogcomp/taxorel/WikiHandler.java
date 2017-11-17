@@ -122,44 +122,8 @@ public class WikiHandler {
     }
 
     public static List<String> getParentCategory(String category){
-        JSONObject jsonObject = null;
-        try {
-            String request = URLEncoder.encode("Category:" + category, "UTF-8");
-            URL url = new URL("https://en.wikipedia.org/w/api.php?action=query&titles=" + request + "&prop=categories&format=json");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            conn.setRequestProperty("Accept", "application/json");
-
-            if (conn.getResponseCode() != 200) {
-                throw new RuntimeException("Failed : HTTP error code : "
-                        + conn.getResponseCode());
-            }
-
-            BufferedReader br = new BufferedReader(new InputStreamReader(
-                    (conn.getInputStream())));
-
-            String output = br.readLine();
-            jsonObject = new JSONObject(output);
-            conn.disconnect();
-
-        } catch (Exception e){
-            e.printStackTrace();
-        }
-        JSONObject result = jsonObject.getJSONObject("query").getJSONObject("pages");
-        String key = (String)result.keySet().toArray()[0];
-        List<String> ret = new ArrayList<>();
-        if (key.equals("-1")){
-            return ret;
-        }
-        if (!result.getJSONObject(key).has("categories")){
-            return ret;
-        }
-        JSONArray results = result.getJSONObject(key).getJSONArray("categories");
-        for (int i = 0; i < results.length(); i++){
-            String raw = (String)results.getJSONObject(i).get("title");
-            ret.add(raw.substring(9));
-        }
-        return ret;
+        String request = "Category:" + category;
+        return getInfoFromTitle(request).categories;
     }
 
     public static List<String> getDaughtersCategory(String category){
@@ -246,6 +210,10 @@ public class WikiHandler {
                 }
                 ret.categories.add(rawCat);
             }
+        }
+        if (!result.getJSONObject(key).has("extract")){
+            ret.extract = "";
+            return ret;
         }
         ret.extract = (String)result.getJSONObject(key).get("extract");
         return ret;
