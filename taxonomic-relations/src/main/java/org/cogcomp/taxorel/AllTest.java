@@ -209,9 +209,12 @@ public class AllTest {
         //FeatureExtractor.mostMatch("A", "V-C");
 
         FeatureExtractor featureExtractor = new FeatureExtractor();
-        System.out.println(featureExtractor._LLMSim.compare("Gnosticism", "Platonism"));
+        //System.out.println(featureExtractor._LLMSim.compare("Gnosticism", "Platonism"));
         //System.out.println(English.plural("actors", 2));
         //NameConverter nameConverter = new DefaultNameConverter();
+        //List<String> newQuery = new ArrayList<>();
+        //newQuery.add("st.louis university");
+        //System.out.println(WikiHandler.getTitlesFromQuery(newQuery));
         //System.out.println(featureExtractor._wordSim.compare("countries", "country").score);
         //System.out.println(featureExtractor._wordSim.compare("actor", "actresses").score);
         //System.out.println(WikiHandler.getContentByTitle("List_of_rivers_by_discharge"));
@@ -220,10 +223,10 @@ public class AllTest {
         //List<String> test = new ArrayList<>();
         //test.add("Multiple myeloma");
         //System.out.println(featureExtractor.extract(test, 0, 0));
-        Instance i = new Instance("newspaper", "news frankfurt");
-        //System.out.println(featureExtractor.settleEntity(i.entity1, i.entity2, new ArrayList<>(), new ArrayList<>()));
+        Instance i = new Instance("Alex Smith", "golf");
+        System.out.println(featureExtractor.settleEntity(i.entity1, i.entity2, new ArrayList<>(), new ArrayList<>()));
         try {
-            generateIntermediateFile("data/jupiter/DataI/train", "data/jupiter/DataI/train.new.2.inter", 430);
+            //generateIntermediateFile("data/jupiter/DataI/train", "data/jupiter/DataI/train.new.2.inter", 547);
         }
         catch (Exception e){
             e.printStackTrace();

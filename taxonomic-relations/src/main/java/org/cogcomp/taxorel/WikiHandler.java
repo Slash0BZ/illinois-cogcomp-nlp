@@ -47,6 +47,12 @@ public class WikiHandler {
         } catch (Exception e){
             e.printStackTrace();
         }
+        if (jsonObject.getJSONObject("query").getJSONObject("searchinfo").has("suggestion")){
+            String suggestion = (String)jsonObject.getJSONObject("query").getJSONObject("searchinfo").get("suggestion");
+            List<String> newQuery = new ArrayList<>();
+            newQuery.add(suggestion);
+            return getTitlesFromQuery(newQuery);
+        }
         JSONArray results = jsonObject.getJSONObject("query").getJSONArray("search");
         for (int i = 0; i < results.length(); i++){
             titles.add((String)results.getJSONObject(i).get("title"));
