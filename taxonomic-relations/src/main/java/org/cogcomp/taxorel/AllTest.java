@@ -223,7 +223,7 @@ public class AllTest {
         //List<String> test = new ArrayList<>();
         //test.add("Multiple myeloma");
         //System.out.println(featureExtractor.extract(test, 0, 0));
-        Instance i = new Instance("Alex Smith", "golf");
+        Instance i = new Instance("Obama", "Politician");
         System.out.println(featureExtractor.settleEntity(i.entity1, i.entity2, new ArrayList<>(), new ArrayList<>()));
         try {
             //generateIntermediateFile("data/jupiter/DataI/train", "data/jupiter/DataI/train.new.2.inter", 547);
