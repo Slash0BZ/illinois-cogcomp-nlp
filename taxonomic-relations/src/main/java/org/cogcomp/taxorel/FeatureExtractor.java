@@ -60,7 +60,7 @@ public class FeatureExtractor {
 
     public FeatureExtractor(){
         _posAnnotator = new POSAnnotator();
-        _idfManager = new IdfManager();
+        //_idfManager = new IdfManager();
         _stopWord = new StopWord(true);
         _nameConverter = new DefaultNameConverter();
         try {
