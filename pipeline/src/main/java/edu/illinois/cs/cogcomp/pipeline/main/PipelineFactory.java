@@ -37,6 +37,7 @@ import edu.stanford.nlp.pipeline.POSTaggerAnnotator;
 import edu.stanford.nlp.pipeline.ParserAnnotator;
 import org.cogcomp.md.MentionAnnotator;
 import org.cogcomp.re.RelationAnnotator;
+import org.cogcomp.taxorel.TaxorelAnnotator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -137,6 +138,8 @@ public class PipelineFactory {
                         nonDefaultValues.put(PipelineConfigurator.USE_RELATION.key,
                                 Configurator.TRUE);
                         break;
+                    case ViewNames.TAXOREL:
+                        nonDefaultValues.put(PipelineConfigurator.USE_TAXOREL.key, Configurator.TRUE);
                     default:
                         logger.warn("View name "
                                 + vu
@@ -286,6 +289,10 @@ public class PipelineFactory {
         if (rm.getBoolean(PipelineConfigurator.USE_DEP)) {
             DepAnnotator dep = new DepAnnotator();
             viewGenerators.put(dep.getViewName(), dep);
+        }
+        if (rm.getBoolean(PipelineConfigurator.USE_TAXOREL)){
+            TaxorelAnnotator taxorelAnnotator = new TaxorelAnnotator();
+            viewGenerators.put(ViewNames.TAXOREL, taxorelAnnotator);
         }
         if (rm.getBoolean(PipelineConfigurator.USE_STANFORD_DEP)
                 || rm.getBoolean(PipelineConfigurator.USE_STANFORD_PARSE)) {

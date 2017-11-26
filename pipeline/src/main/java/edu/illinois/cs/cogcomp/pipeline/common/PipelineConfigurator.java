@@ -43,6 +43,7 @@ public class PipelineConfigurator extends AnnotatorServiceConfigurator {
     public static final Property USE_TRANSLITERATION = new Property("useTransliteration", FALSE);
     public static final Property USE_MENTION = new Property("useMention", FALSE);
     public static final Property USE_RELATION = new Property("useRelation", FALSE);
+    public static final Property USE_TAXOREL = new Property("useTaxorel", FALSE);
     public static final Property USE_LAZY_INITIALIZATION = new Property(
             AnnotatorConfigurator.IS_LAZILY_INITIALIZED.key, TRUE);
     public static final Property USE_SRL_INTERNAL_PREPROCESSOR = new Property(
@@ -79,7 +80,7 @@ public class PipelineConfigurator extends AnnotatorServiceConfigurator {
                         USE_STANFORD_PARSE, USE_STANFORD_DEP, USE_SRL_VERB, USE_SRL_NOM, USE_SRL_PREP, USE_SRL_COMMA,
                         USE_QUANTIFIER, USE_VERB_SENSE, USE_JSON, USE_RELATION,
                         USE_LAZY_INITIALIZATION, USE_SRL_INTERNAL_PREPROCESSOR, SPLIT_ON_DASH,
-                        USE_SENTENCE_PIPELINE, USE_TIMEX3, USE_MENTION, USE_TRANSLITERATION};
+                        USE_SENTENCE_PIPELINE, USE_TIMEX3, USE_MENTION, USE_TRANSLITERATION, USE_TAXOREL};
         return (new AnnotatorServiceConfigurator().getConfig(new ResourceManager(
                 generateProperties(properties))));
     }

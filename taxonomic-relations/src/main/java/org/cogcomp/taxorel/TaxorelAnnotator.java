@@ -35,14 +35,14 @@ public class TaxorelAnnotator extends Annotator {
         String arg2 = tokenView.getConstituents().get(2).toString();
         int result = Integer.parseInt(featureExtractor.settleEntity(arg1, arg2, new ArrayList<>(), new ArrayList<>()));
         String label = labels[result];
-        Constituent arg1New = tokenView.getConstituents().get(0).cloneForNewView("TAXOREL");
-        Constituent arg2New = tokenView.getConstituents().get(2).cloneForNewView("TAXOREL");
-        View relationView = new SpanLabelView("TAXOREL", ta);
+        Constituent arg1New = tokenView.getConstituents().get(0).cloneForNewView(ViewNames.TAXOREL);
+        Constituent arg2New = tokenView.getConstituents().get(2).cloneForNewView(ViewNames.TAXOREL);
+        View relationView = new SpanLabelView(ViewNames.TAXOREL, ta);
         relationView.addConstituent(arg1New);
         relationView.addConstituent(arg2New);
         Relation output = new Relation(label, arg1New, arg2New, 1.0f);
         relationView.addRelation(output);
-        ta.addView("TAXOREL", relationView);
+        ta.addView(ViewNames.TAXOREL, relationView);
     }
 
 }

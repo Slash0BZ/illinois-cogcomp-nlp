@@ -131,6 +131,8 @@ public class ViewNames {
 
     public static final String TRANSLITERATION = "TRANSLITERATION";
 
+    public static final String TAXOREL = "TAXOREL";
+
     public static ViewTypes getViewType(String viewName) {
         switch (viewName) {
             case TOKENS:
