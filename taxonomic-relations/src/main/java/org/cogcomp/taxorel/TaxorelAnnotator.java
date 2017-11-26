@@ -35,19 +35,23 @@ public class TaxorelAnnotator extends Annotator {
             doInitialize();
         }
         View tokenView = ta.getView(ViewNames.TOKENS);
-        if (tokenView.getConstituents().size() != 3 || !tokenView.getConstituents().get(1).toString().equals(",")){
-            throw new AnnotatorException("Incorrect Input Format");
+        int splitIdx = -1;
+        for (int i = 0; i < tokenView.getConstituents().size(); i ++){
+            if (tokenView.getConstituents().get(i).toString().equals(",")){
+                splitIdx = i;
+            }
         }
-        String arg1 = tokenView.getConstituents().get(0).toString();
-        String arg2 = tokenView.getConstituents().get(2).toString();
-        int result = Integer.parseInt(featureExtractor.settleEntity(arg1, arg2, new ArrayList<>(), new ArrayList<>()));
+        if (splitIdx == -1){
+            throw new AnnotatorException("No comma splitter found.");
+        }
+        Constituent arg1 = new Constituent("", ViewNames.TAXOREL, ta, 0, splitIdx);
+        Constituent arg2 = new Constituent("", ViewNames.TAXOREL, ta, splitIdx + 1, tokenView.getConstituents().size());
+        int result = Integer.parseInt(featureExtractor.settleEntity(arg1.toString(), arg2.toString(), new ArrayList<>(), new ArrayList<>()));
         String label = labels[result];
-        Constituent arg1New = tokenView.getConstituents().get(0).cloneForNewView(ViewNames.TAXOREL);
-        Constituent arg2New = tokenView.getConstituents().get(2).cloneForNewView(ViewNames.TAXOREL);
         View relationView = new SpanLabelView(ViewNames.TAXOREL, ta);
-        relationView.addConstituent(arg1New);
-        relationView.addConstituent(arg2New);
-        Relation output = new Relation(label, arg1New, arg2New, 1.0f);
+        relationView.addConstituent(arg1);
+        relationView.addConstituent(arg2);
+        Relation output = new Relation(label, arg1, arg2, 1.0f);
         relationView.addRelation(output);
         ta.addView(ViewNames.TAXOREL, relationView);
     }

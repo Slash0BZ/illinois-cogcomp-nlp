@@ -28,7 +28,7 @@ public class AnnotatorTester {
 
     public static void main(String[] args){
         TaxorelAnnotator taxorelAnnotator = new TaxorelAnnotator();
-        String text = "Obama, President";
+        String text = "university of oulu, university";
         String corpus = "taxorel";
         String textId = "001";
 

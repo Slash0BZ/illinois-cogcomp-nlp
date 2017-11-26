@@ -131,6 +131,9 @@ public class PipelineFactory {
                         nonDefaultValues.put(PipelineConfigurator.USE_TIMEX3.key,
                                 Configurator.TRUE);
                         break;
+                    case ViewNames.TAXOREL:
+                        nonDefaultValues.put(PipelineConfigurator.USE_TAXOREL.key, Configurator.TRUE);
+                        break;
                     case ViewNames.MENTION:
                         nonDefaultValues.put(PipelineConfigurator.USE_MENTION.key,
                                 Configurator.TRUE);
@@ -138,8 +141,6 @@ public class PipelineFactory {
                         nonDefaultValues.put(PipelineConfigurator.USE_RELATION.key,
                                 Configurator.TRUE);
                         break;
-                    case ViewNames.TAXOREL:
-                        nonDefaultValues.put(PipelineConfigurator.USE_TAXOREL.key, Configurator.TRUE);
                     default:
                         logger.warn("View name "
                                 + vu
@@ -290,10 +291,6 @@ public class PipelineFactory {
             DepAnnotator dep = new DepAnnotator();
             viewGenerators.put(dep.getViewName(), dep);
         }
-        if (rm.getBoolean(PipelineConfigurator.USE_TAXOREL)){
-            TaxorelAnnotator taxorelAnnotator = new TaxorelAnnotator();
-            viewGenerators.put(ViewNames.TAXOREL, taxorelAnnotator);
-        }
         if (rm.getBoolean(PipelineConfigurator.USE_STANFORD_DEP)
                 || rm.getBoolean(PipelineConfigurator.USE_STANFORD_PARSE)) {
             Properties stanfordProps = new Properties();
@@ -393,6 +390,10 @@ public class PipelineFactory {
             Properties rmProps = new TemporalChunkerConfigurator().getDefaultConfig().getProperties();
             TemporalChunkerAnnotator tca = new TemporalChunkerAnnotator(new ResourceManager(rmProps));
             viewGenerators.put(ViewNames.TIMEX3, tca);
+        }
+        if (rm.getBoolean(PipelineConfigurator.USE_TAXOREL)){
+            TaxorelAnnotator taxorelAnnotator = new TaxorelAnnotator();
+            viewGenerators.put(ViewNames.TAXOREL, taxorelAnnotator);
         }
         return viewGenerators;
     }
