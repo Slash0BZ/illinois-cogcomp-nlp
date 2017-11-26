@@ -8,6 +8,7 @@
 package org.cogcomp.taxorel;
 
 import edu.illinois.cs.cogcomp.annotation.TextAnnotationBuilder;
+import edu.illinois.cs.cogcomp.core.datastructures.ViewNames;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.Constituent;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.Relation;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.TextAnnotation;
@@ -28,7 +29,7 @@ public class AnnotatorTester {
 
     public static void main(String[] args){
         TaxorelAnnotator taxorelAnnotator = new TaxorelAnnotator();
-        String text = "university of oulu, university";
+        String text = "university of oulu, university. movie, so i married an axe murderer.";
         String corpus = "taxorel";
         String textId = "001";
 
@@ -42,8 +43,9 @@ public class AnnotatorTester {
         catch (Exception e){
             e.printStackTrace();
         }
-        Relation r = ta.getView("TAXOREL").getRelations().get(0);
-        printRelation(r);
+        for (Relation r : ta.getView(ViewNames.TAXOREL).getRelations()){
+            printRelation(r);
+        }
     }
 
 }

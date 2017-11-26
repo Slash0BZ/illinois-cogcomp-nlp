@@ -137,6 +137,7 @@ public class PipelineFactory {
                     case ViewNames.MENTION:
                         nonDefaultValues.put(PipelineConfigurator.USE_MENTION.key,
                                 Configurator.TRUE);
+                        break;
                     case ViewNames.RELATION:
                         nonDefaultValues.put(PipelineConfigurator.USE_RELATION.key,
                                 Configurator.TRUE);

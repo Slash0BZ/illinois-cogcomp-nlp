@@ -35,24 +35,27 @@ public class TaxorelAnnotator extends Annotator {
             doInitialize();
         }
         View tokenView = ta.getView(ViewNames.TOKENS);
-        int splitIdx = -1;
-        for (int i = 0; i < tokenView.getConstituents().size(); i ++){
-            if (tokenView.getConstituents().get(i).toString().equals(",")){
-                splitIdx = i;
-            }
-        }
-        if (splitIdx == -1){
-            throw new AnnotatorException("No comma splitter found.");
-        }
-        Constituent arg1 = new Constituent("", ViewNames.TAXOREL, ta, 0, splitIdx);
-        Constituent arg2 = new Constituent("", ViewNames.TAXOREL, ta, splitIdx + 1, tokenView.getConstituents().size());
-        int result = Integer.parseInt(featureExtractor.settleEntity(arg1.toString(), arg2.toString(), new ArrayList<>(), new ArrayList<>()));
-        String label = labels[result];
         View relationView = new SpanLabelView(ViewNames.TAXOREL, ta);
-        relationView.addConstituent(arg1);
-        relationView.addConstituent(arg2);
-        Relation output = new Relation(label, arg1, arg2, 1.0f);
-        relationView.addRelation(output);
+        for (int s = 0; s < ta.getNumberOfSentences(); s++) {
+            int splitIdx = -1;
+            Sentence cur = ta.getSentence(s);
+            for (int i = cur.getStartSpan(); i < cur.getEndSpan(); i++) {
+                if (tokenView.getConstituents().get(i).toString().equals(",")) {
+                    splitIdx = i;
+                }
+            }
+            if (splitIdx == -1) {
+                throw new AnnotatorException("No comma splitter found.");
+            }
+            Constituent arg1 = new Constituent("", ViewNames.TAXOREL, ta, cur.getStartSpan(), splitIdx);
+            Constituent arg2 = new Constituent("", ViewNames.TAXOREL, ta, splitIdx + 1, cur.getEndSpan() - 1);
+            int result = Integer.parseInt(featureExtractor.settleEntity(arg1.toString(), arg2.toString(), new ArrayList<>(), new ArrayList<>()));
+            String label = labels[result];
+            relationView.addConstituent(arg1);
+            relationView.addConstituent(arg2);
+            Relation output = new Relation(label, arg1, arg2, 1.0f);
+            relationView.addRelation(output);
+        }
         ta.addView(ViewNames.TAXOREL, relationView);
     }
 
