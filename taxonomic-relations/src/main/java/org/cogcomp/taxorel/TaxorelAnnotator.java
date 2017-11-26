@@ -25,7 +25,7 @@ public class TaxorelAnnotator extends Annotator {
         this(true);
     }
     public TaxorelAnnotator(boolean lazilyInitialize){
-        super(ViewNames.MENTION, new String[]{}, lazilyInitialize);
+        super(ViewNames.TAXOREL, new String[]{}, lazilyInitialize);
     }
     public void initialize(ResourceManager rm){
         featureExtractor = new FeatureExtractor();
