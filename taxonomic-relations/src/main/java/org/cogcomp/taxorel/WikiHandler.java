@@ -15,6 +15,9 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.*;
 
 /**
@@ -134,7 +137,29 @@ public class WikiHandler {
         return ret;
     }
 
-    public static List<String> getParentCategory(String category){
+    public static List<String> getParentCategory(String category, Connection conn){
+        List<String> ret = new ArrayList<>();
+        String normalized = category.replace(" ", "_");
+        try {
+            PreparedStatement statement = conn.prepareStatement("SELECT CONVERT(super_cats USING utf8) FROM category WHERE cat_title=?");
+            statement.setString(1, normalized);
+            ResultSet rs = statement.executeQuery();
+            while (rs.next()){
+                String combined = (String)rs.getObject(1);
+                String[] subcats = combined.split("\\|\\|");
+                for (String subcat : subcats){
+                    if (subcat.length() > 0){
+                        ret.add(subcat);
+                    }
+                }
+            }
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+        if (ret.size() > 0){
+            return ret;
+        }
         String request = "Category:" + category;
         return getInfoFromTitle(request).categories;
     }

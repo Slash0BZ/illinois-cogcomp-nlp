@@ -200,7 +200,7 @@ public class AllTest {
                 arrOutputInstances.add(instance);
                 ArrayList<String> arrStringInstances = DataHandler.makeStringInstances(
                         arrOutputInstances, Constants.INPUT_TYPE_INTERMEDIATE);
-                DataHandler.writeLines(arrStringInstances, "data/jupiter/DataI/train.new.afterchanges.errors");
+                DataHandler.writeLines(arrStringInstances, "data/jupiter/DataI/test.errors");
             }
             System.out.println("Current Acc: " + (double)correct / (double)count);
             System.out.println();
@@ -215,7 +215,7 @@ public class AllTest {
         //featureExtractionTest();
         //FeatureExtractor.mostMatch("A", "V-C");
 
-        FeatureExtractor featureExtractor = new FeatureExtractor();
+        //FeatureExtractor featureExtractor = new FeatureExtractor();
         //System.out.println(featureExtractor._LLMSim.compare("Gnosticism", "Platonism"));
         //System.out.println(English.plural("actors", 2));
         //NameConverter nameConverter = new DefaultNameConverter();
@@ -230,10 +230,10 @@ public class AllTest {
         //List<String> test = new ArrayList<>();
         //test.add("Multiple myeloma");
         //System.out.println(featureExtractor.extract(test, 0, 0));
-        Instance i = new Instance("Obama", "Politician");
-        System.out.println(featureExtractor.settleEntity(i.entity1, i.entity2, new ArrayList<>(), new ArrayList<>()));
+        //Instance i = new Instance("Obama", "Politician");
+        //System.out.println(featureExtractor.settleEntity(i.entity1, i.entity2, new ArrayList<>(), new ArrayList<>()));
         try {
-            //generateIntermediateFile("data/jupiter/DataI/train", "data/jupiter/DataI/train.new.2.inter", 547);
+            generateIntermediateFile("data/jupiter/DataI/test", "data/jupiter/DataI/train.new.2.inter", 0);
         }
         catch (Exception e){
             e.printStackTrace();

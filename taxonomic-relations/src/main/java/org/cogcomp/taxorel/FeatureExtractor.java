@@ -25,6 +25,8 @@ import javatools.parsers.NounGroup;
 import org.jibx.schema.codegen.extend.DefaultNameConverter;
 import org.jibx.schema.codegen.extend.NameConverter;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
 import java.text.DecimalFormat;
 import java.util.*;
 
@@ -38,6 +40,7 @@ public class FeatureExtractor {
     public WordSim _wordSim = null;
     public Metric _LLMSim = null;
     public NameConverter _nameConverter = null;
+    public Connection _conn = null;
     int NUM_OF_DOCS = 5510659;
     int K = 2;
     public static final Set<String> INVALID_CATEGORY_HEAD = new HashSet<String>();
@@ -66,6 +69,7 @@ public class FeatureExtractor {
         try {
             _wordSim = new WordSim(new SimConfigurator().getConfig(new ResourceManager("taxonomic-relations/src/main/config/configurations.properties")), "paragram");
             _LLMSim = new LLMStringSim("taxonomic-relations/src/main/config/configurations.properties");
+            _conn = DriverManager.getConnection("jdbc:mysql://localhost/wiki", "wiki", "Wikipedia2017");
         }
         catch (Exception e){
             e.printStackTrace();
@@ -205,7 +209,7 @@ public class FeatureExtractor {
         }
         for (String c : inputCats){
             arrCats.add(c);
-            List<String> newExtracts = WikiHandler.getParentCategory(c);
+            List<String> newExtracts = WikiHandler.getParentCategory(c, _conn);
             if (newExtracts.size() == 1){
                 arrCats.addAll(extract(newExtracts, level, counter + 1));
             }
@@ -663,10 +667,10 @@ public class FeatureExtractor {
         List<String> catesA = WikiHandler.getInfoFromTitle(titleA).categories;
         List<String> catesB = WikiHandler.getInfoFromTitle(titleB).categories;
         if (catesA.size() == 1){
-            catesA.addAll(WikiHandler.getParentCategory(catesA.get(0)));
+            catesA.addAll(WikiHandler.getParentCategory(catesA.get(0), _conn));
         }
         if (catesB.size() == 1){
-            catesB.addAll(WikiHandler.getParentCategory(catesB.get(0)));
+            catesB.addAll(WikiHandler.getParentCategory(catesB.get(0), _conn));
         }
 
         List<String> catesAFull = extract(catesA, 0, 0);
@@ -739,12 +743,12 @@ public class FeatureExtractor {
         List<String> cateALv2 = new ArrayList<>();
         List<String> cateBLv2 = new ArrayList<>();
         for (String c : catesA){
-            cateALv2.addAll(WikiHandler.getParentCategory(c));
+            cateALv2.addAll(WikiHandler.getParentCategory(c, _conn));
         }
         cateALv2.addAll(catesA);
 
         for (String c : catesB){
-            cateBLv2.addAll(WikiHandler.getParentCategory(c));
+            cateBLv2.addAll(WikiHandler.getParentCategory(c, _conn));
         }
         cateBLv2.addAll(catesB);
 
