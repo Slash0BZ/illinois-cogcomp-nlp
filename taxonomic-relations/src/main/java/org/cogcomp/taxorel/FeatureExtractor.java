@@ -7,6 +7,7 @@
  */
 package org.cogcomp.taxorel;
 
+import com.google.common.collect.ObjectArrays;
 import edu.illinois.cs.cogcomp.annotation.TextAnnotationBuilder;
 import edu.illinois.cs.cogcomp.config.SimConfigurator;
 import edu.illinois.cs.cogcomp.core.datastructures.Pair;
@@ -44,7 +45,8 @@ public class FeatureExtractor {
     int NUM_OF_DOCS = 5510659;
     int K = 2;
     public static final Set<String> INVALID_CATEGORY_HEAD = new HashSet<String>();
-    public static String[] skipWords = {"establishments", "births", "deaths", "stub", "history", "family", "person", "people", "events"};
+    public static String[] skipWords = {"establishments", "births", "deaths", "stub", "history", "family", "person", "people", "events", "articles"};
+    public static String[] skipWordsForParents = {"articles"};
     List<String> skipWordList;
     static {
         INVALID_CATEGORY_HEAD.add("name");
@@ -792,11 +794,10 @@ public class FeatureExtractor {
             }
             String cur = "";
             for (Constituent c : ta.getView(ViewNames.POS)) {
-                //if (c.getLabel().startsWith("NN") || c.getLabel().startsWith("IN")) {
                 if (c.getLabel().startsWith("IN")){
                     break;
                 }
-                if (c.getLabel().startsWith("NN")) {
+                if (c.getLabel().startsWith("NNS")) {
                     cur += c.toString() + " ";
                 }
             }
@@ -932,11 +933,12 @@ public class FeatureExtractor {
     String[] organization = new String[]{"educational institution", "terrorism", "military", "fraternities and sororities", "sports league", "sports team", "political party", "stock exchange", "government agency", "airline", "railway", "news agency"};
     String[] work_of_art = new String[]{"play", "music", "broadcast_programming", "film", "newspaper"};
     String[] facility = new String[]{"restaurant", "sports venue", "library", "hospital", "airport", "power station", "hotel", "bridge", "dam", "theater"};
-    String[] person = new String[]{"politician", "coach", "sportspeople", "clergy", "architect", "engineer", "author", "physician", "surgeon", "soldier", "monarch", "film director", "actor", "musician", "player"};
+    String[] person = new String[]{"politician", "coach", "sportspeople", "clergy", "architect", "engineer", "author", "physician", "surgeon", "soldier", "monarch", "film director", "actor", "musician"};
     String[] medicine = new String[]{"symptom", "therapy", "drug"};
     String[] event = new String[]{"Natural disaster", "election", "Sports events", "war", "protest", "Terrorist incidents"};
     String[] product = new String[]{"food", "engine", "camera", "train", "mobile phone", "car", "ship", "computer", "airplane", "weapon"};
     String[][] types = new String[][]{locations, organization, work_of_art, facility, person, medicine, event, product};
+    String[][] typeIdentifier = new String[][]{person, organization, ObjectArrays.concat(locations, facility, String.class), event};
 
     public Map<String, Pair<String, List<String>>> preprocessTypes(){
         Map<String, Pair<String, List<String>>> ret = new HashMap<>();
@@ -1012,30 +1014,42 @@ public class FeatureExtractor {
             catesA.addAll(WikiHandler.getParentCategory(catesA.get(0), _conn));
         }
 
-
-        for (int i = 0; i < K; i++){
-
+        List<List<String>> outputs = new ArrayList<>();
+        for (int i = 0; i < 4; i++){
+            outputs.add(new ArrayList<String>());
         }
+        int[] count = new int[]{0, 0, 0, 0};
+        Map<String, boolean[]> results = new HashMap<>();
+        for (String s : catesA){
+            boolean[] result = isCoarseTypeHelperConcur(s, 0, outputs);
+            results.put(s, result);
+            for (int i = 0; i < result.length; i++){
+                if (result[i]){
+                    count[i] += 1;
+                }
+            }
+        }
+        int maxCountIdx = 0;
+        int maxCount = count[0];
+        for (int i = 1; i < count.length; i++){
+            if (count[i] > maxCount) {
+                maxCountIdx = i;
+                maxCount = count[i];
+            }
+        }
+        Set<String> keywords = new HashSet<>(getFilteredNouns(outputs.get(maxCountIdx)));
 
-        List<String> catesAFull = extract(catesA, 0, 0);
 
 
         List<String> detA = new ArrayList<>();
-        List<String> detAFull = new ArrayList<>();
-        for (String ca : getFilteredNouns(catesA)){
-            double scoreTerm = Math.max(getLLMScore(ca, input), getLLMScore(input, ca));
-            double scoreTitle = Math.max(getLLMScore(ca, title), getLLMScore(title, ca));;
-            //if (scoreTerm < 0.8 && scoreTitle < 0.8){
-                detA.add(ca);
-            //}
+        for (String s : results.keySet()){
+            if (results.get(s)[maxCountIdx]){
+                detA.add(s);
+            }
         }
-        for (String ca : getFilteredNouns(catesAFull)){
-            double scoreTerm = Math.max(getLLMScore(ca, input), getLLMScore(input, ca));
-            double scoreTitle = Math.max(getLLMScore(ca, title), getLLMScore(title, ca));;
-            //if (scoreTerm < 0.8 && scoreTitle < 0.8){
-                detAFull.add(ca);
-            //}
-        }
+        List<String> detAFull = new ArrayList<>(keywords);
+
+
         List<String> confidenceSet = new ArrayList<>();
         for (String s : detA){
             confidenceSet.add(depluralizePhrase(s));
@@ -1046,54 +1060,33 @@ public class FeatureExtractor {
 
         int maxScore = 0;
         String chosen = "";
-        for (String[] typeGroup : types) {
-            for (String type : typeGroup) {
-                for (String sa : detAFull) {
-                    sa = depluralizePhrase(sa);
-                    String sb = depluralizePhrase(type);
-                    if (getLLMScore(sa, sb) > 0.9) {
-                        int curScore = 0;
-                        for (String da : confidenceSet){
-                            if (getLLMScore(da, sa) > 0.9 || getLLMScore(sa, da) > 0.9){
-                                curScore ++;
-                            }
+        for (String type : typeIdentifier[maxCountIdx]) {
+            for (String sa : detAFull) {
+                sa = depluralizePhrase(sa);
+                String sb = depluralizePhrase(type);
+                if (getLLMScore(sa, sb) > 0.9) {
+                    int curScore = 0;
+                    for (String da : confidenceSet){
+                        if (getLLMScore(da, sa) > 0.9 || getLLMScore(sa, da) > 0.9){
+                            curScore ++;
                         }
-                        if (curScore > maxScore){
-                            maxScore = curScore;
-                            chosen = type;
-                        }
-                        break;
                     }
+                    if (curScore > maxScore){
+                        maxScore = curScore;
+                        chosen = type;
+                    }
+                    break;
                 }
             }
         }
         ret.add(chosen);
-        //System.out.println(confidenceSet);
-        //System.out.println();
-        //System.out.println(getFilteredNouns(catesAFull));
-        //System.out.println(catesAFull);
-        List<String> person = new ArrayList<>();
-        List<String> organization = new ArrayList<>();
-        List<String> place = new ArrayList<>();
-        List<String> event = new ArrayList<>();
-        for (String s : catesA){
-            isCoarseTypeHelper(s, "People", 0, person);
-            isCoarseTypeHelper(s, "Organizations", 0, organization);
-            isCoarseTypeHelper(s, "Places", 0, place);
-            isCoarseTypeHelper(s, "Events", 0, event);
-        }
-        System.out.println("People: " + person);
-        System.out.println("Org: " + organization);
-        System.out.println("PLA: " + place);
-        System.out.println("Event: " + event);
 
         return ret;
     }
 
 
     public boolean isCoarseTypeHelper(String cur, String target, int level, List<String> outputs){
-        System.out.println("Level " + level);
-        if (level > 7){
+        if (level > 8){
             return false;
         }
         List<String> cats = WikiHandler.getParentCategory(cur, _conn);
@@ -1112,6 +1105,108 @@ public class FeatureExtractor {
             return true;
         }
         return false;
+    }
+
+    public double calculateTypeScore(String cur, String target, int level){
+        if (level > 8){
+            return 0.0;
+        }
+        List<String> cats = WikiHandler.getParentCategory(cur, _conn);
+        if (cats.size() == 0){
+            return 0.0;
+        }
+        double score = 0.0;
+        for (String s : cats){
+            if (s.toLowerCase().equals(target.toLowerCase())){
+                return 1.0;
+            }
+            double accScore = calculateTypeScore(s, target, level + 1);
+            score += accScore;
+        }
+        score = score / (double)cats.size();
+        return score;
+    }
+
+    public boolean[] isCoarseTypeHelperConcur(String cur, int level, List<List<String>> outputs){
+        if (level > 9){
+            return new boolean[]{false, false, false, false};
+        }
+        List<String> catsRaw = WikiHandler.getParentCategory(cur, _conn);
+        List<String> cats = new ArrayList<>();
+        for (String s : catsRaw){
+            boolean add = true;
+            for (String skips : skipWordsForParents) {
+                if (s.toLowerCase().contains(skips)){
+                    add = false;
+                    break;
+                }
+            }
+            if (add){
+                cats.add(s);
+            }
+        }
+        int[] fitCount = new int[]{0, 0, 0, 0};
+        boolean[] initialRet = new boolean[]{false, false, false, false};
+        if (cats.contains("People")){
+            int idx = 0;
+            initialRet[idx] = true;
+            if (level < 3) {
+                outputs.get(idx).add(cur);
+            }
+        }
+        if (cats.contains("Organizations")){
+            int idx = 1;
+            initialRet[idx] = true;
+            if (level < 3) {
+                outputs.get(idx).add(cur);
+            }
+        }
+        if (cats.contains("Places")){
+            int idx = 2;
+            initialRet[idx] = true;
+            initialRet[idx] = true;
+            if (level < 3) {
+                outputs.get(idx).add(cur);
+            }
+        }
+        if (cats.contains("Events")){
+            int idx = 3;
+            initialRet[idx] = true;
+            initialRet[idx] = true;
+            if (level < 3) {
+                outputs.get(idx).add(cur);
+            }
+        }
+        for (boolean b : initialRet){
+            if (b){
+                return initialRet;
+            }
+        }
+        for (String s : cats){
+
+            boolean[] result = (isCoarseTypeHelperConcur(s, level + 1, outputs));
+            for (int i = 0; i < result.length; i++){
+
+                if (result[i]){
+                    fitCount[i] += 1;
+                }
+            }
+        }
+        int maxCountIdx = 0;
+        int maxCount = fitCount[0];
+        for (int i = 1; i < fitCount.length; i++){
+            if (fitCount[i] > maxCount) {
+                maxCountIdx = i;
+                maxCount = fitCount[i];
+            }
+        }
+        if (((double)fitCount[maxCountIdx] / (double)cats.size()) >= 0.5){
+            initialRet[maxCountIdx] = true;
+            if (level < 3) {
+                outputs.get(maxCountIdx).add(cur);
+            }
+        }
+        return initialRet;
     }
 
 }

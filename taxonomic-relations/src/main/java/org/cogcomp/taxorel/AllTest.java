@@ -10,8 +10,6 @@ package org.cogcomp.taxorel;
 import org.cogcomp.taxorel.lbjGen.AFRelationClassifier;
 import org.cogcomp.taxorel.lbjGen.Label;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -211,16 +209,6 @@ public class AllTest {
 
     }
 
-    public static void addPersonAtttr(){
-        try {
-            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost/wiki", "wiki", "Wikipedia2017");
-
-        }
-        catch (Exception e){
-            e.printStackTrace();
-        }
-    }
-
     public static void main(String[] args) {
         //simpleClassifierTest();
         //testWithConstraints();
@@ -244,8 +232,7 @@ public class AllTest {
         //System.out.println(featureExtractor.extract(test, 0, 0));
         //Instance i = new Instance("Obama", "university");
         //System.out.println(featureExtractor.settleEntity(i.entity1, i.entity2, new ArrayList<>(), new ArrayList<>()));
-        System.out.println(featureExtractor.typer("Lebron James"));
-        //System.out.println(featureExtractor.isCoarseType("LeBron James", "Los Angeles"));
+        System.out.println(featureExtractor.typer("George W. Bush"));
         try {
             //generateIntermediateFile("data/jupiter/DataI/test", "data/jupiter/DataI/train.new.2.inter", 0);
         }
