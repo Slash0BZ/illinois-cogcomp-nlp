@@ -10,6 +10,8 @@ package org.cogcomp.taxorel;
 import org.cogcomp.taxorel.lbjGen.AFRelationClassifier;
 import org.cogcomp.taxorel.lbjGen.Label;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -200,7 +202,7 @@ public class AllTest {
                 arrOutputInstances.add(instance);
                 ArrayList<String> arrStringInstances = DataHandler.makeStringInstances(
                         arrOutputInstances, Constants.INPUT_TYPE_INTERMEDIATE);
-                DataHandler.writeLines(arrStringInstances, "data/jupiter/DataI/test.errors");
+                //DataHandler.writeLines(arrStringInstances, "data/jupiter/DataI/test.errors");
             }
             System.out.println("Current Acc: " + (double)correct / (double)count);
             System.out.println();
@@ -209,14 +211,24 @@ public class AllTest {
 
     }
 
+    public static void addPersonAtttr(){
+        try {
+            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost/wiki", "wiki", "Wikipedia2017");
+
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
     public static void main(String[] args) {
         //simpleClassifierTest();
         //testWithConstraints();
         //featureExtractionTest();
         //FeatureExtractor.mostMatch("A", "V-C");
 
-        //FeatureExtractor featureExtractor = new FeatureExtractor();
-        //System.out.println(featureExtractor._LLMSim.compare("Gnosticism", "Platonism"));
+        FeatureExtractor featureExtractor = new FeatureExtractor();
+        //System.out.println(featureExtractor._LLMSim.compare("feminists", "writers"));
         //System.out.println(English.plural("actors", 2));
         //NameConverter nameConverter = new DefaultNameConverter();
         //List<String> newQuery = new ArrayList<>();
@@ -230,10 +242,12 @@ public class AllTest {
         //List<String> test = new ArrayList<>();
         //test.add("Multiple myeloma");
         //System.out.println(featureExtractor.extract(test, 0, 0));
-        //Instance i = new Instance("Obama", "Politician");
+        //Instance i = new Instance("Obama", "university");
         //System.out.println(featureExtractor.settleEntity(i.entity1, i.entity2, new ArrayList<>(), new ArrayList<>()));
+        System.out.println(featureExtractor.typer("Lebron James"));
+        //System.out.println(featureExtractor.isCoarseType("LeBron James", "Los Angeles"));
         try {
-            generateIntermediateFile("data/jupiter/DataI/test", "data/jupiter/DataI/train.new.2.inter", 0);
+            //generateIntermediateFile("data/jupiter/DataI/test", "data/jupiter/DataI/train.new.2.inter", 0);
         }
         catch (Exception e){
             e.printStackTrace();

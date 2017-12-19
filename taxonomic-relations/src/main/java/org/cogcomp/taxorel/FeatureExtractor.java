@@ -728,6 +728,7 @@ public class FeatureExtractor {
                 tsb = depluralizePhrase(tsb);
                 if (getLLMScore(sa, tsb) > 0.85){
                     System.out.println("Reason for 2: " + sa + " " + tsb);
+                    System.out.println(detA);
                     isTwo = true;
                     break;
                 }
@@ -778,7 +779,7 @@ public class FeatureExtractor {
     }
 
     public List<String> getFilteredNouns(List<String> inputs){
-        List<String> ret = new ArrayList<>();
+        List<String> retTmp = new ArrayList<>();
         for (String i : inputs) {
             TextAnnotationBuilder tab;
             boolean splitOnHyphens = false;
@@ -811,9 +812,34 @@ public class FeatureExtractor {
             if (skipCur){
                 continue;
             }
-            ret.add(cur);
+            retTmp.add(cur);
         }
-        return ret;
+        List<String> retFinal = new ArrayList<>();
+        for (String s : retTmp){
+            TextAnnotationBuilder tab;
+            boolean splitOnHyphens = false;
+            tab = new TokenizerTextAnnotationBuilder(new StatefulTokenizer(splitOnHyphens));
+            TextAnnotation ta = tab.createTextAnnotation("", "", s);
+            if (s.length() == 0){
+                continue;
+            }
+            try {
+                ta.addView(_posAnnotator);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            String cur = "";
+            for (Constituent c : ta.getView(ViewNames.POS)) {
+                if (c.getLabel().contains("S")){
+                    cur += c.toString() + " ";
+                }
+            }
+            if (cur.length() > 0){
+                cur = cur.substring(0, cur.length() - 1);
+                retFinal.add(cur);
+            }
+        }
+        return retTmp;
     }
 
     public List<Double> getLLMSim(List<String> catsA, List<String> catsB){
@@ -902,4 +928,190 @@ public class FeatureExtractor {
         }
         return 0.0;
     }
+    String[] locations = new String[]{"country", "county", "park", "province", "cemetery", "glacier", "astral body", "island", "body of water", "mountain"};
+    String[] organization = new String[]{"educational institution", "terrorism", "military", "fraternities and sororities", "sports league", "sports team", "political party", "stock exchange", "government agency", "airline", "railway", "news agency"};
+    String[] work_of_art = new String[]{"play", "music", "broadcast_programming", "film", "newspaper"};
+    String[] facility = new String[]{"restaurant", "sports venue", "library", "hospital", "airport", "power station", "hotel", "bridge", "dam", "theater"};
+    String[] person = new String[]{"politician", "coach", "sportspeople", "clergy", "architect", "engineer", "author", "physician", "surgeon", "soldier", "monarch", "film director", "actor", "musician", "player"};
+    String[] medicine = new String[]{"symptom", "therapy", "drug"};
+    String[] event = new String[]{"Natural disaster", "election", "Sports events", "war", "protest", "Terrorist incidents"};
+    String[] product = new String[]{"food", "engine", "camera", "train", "mobile phone", "car", "ship", "computer", "airplane", "weapon"};
+    String[][] types = new String[][]{locations, organization, work_of_art, facility, person, medicine, event, product};
+
+    public Map<String, Pair<String, List<String>>> preprocessTypes(){
+        Map<String, Pair<String, List<String>>> ret = new HashMap<>();
+        for (String[] typeGroup : types){
+            for (String type : typeGroup){
+                List<String> query = new ArrayList<>();
+                query.add(type);
+                List<String> titles = WikiHandler.getTitlesFromQuery(query);
+                Pair<String, List<String>> curPair = new Pair<>(titles.get(0), WikiHandler.getInfoFromTitle(titles.get(0)).categories);
+                ret.put(type, curPair);
+            }
+        }
+        return ret;
+    }
+
+    public List<List<String>> clusterTypes(List<String> types){
+        List<List<String>> ret = new ArrayList<>();
+        List<String> typesCopy = new ArrayList<>(types);
+        List<String> traversed = new ArrayList<>();
+        while (true){
+            if (traversed.size() == typesCopy.size()){
+                break;
+            }
+            List<String> curCluster = new ArrayList<>();
+            String seed = "";
+            for (String s : typesCopy){
+                if (!traversed.contains(s)){
+                    seed = s;
+                }
+            }
+            curCluster.add(seed);
+            traversed.add(seed);
+            for (String s : typesCopy){
+                if (s.equals(seed)){
+                    continue;
+                }
+                if (traversed.contains(s)){
+                    continue;
+                }
+                boolean merge = true;
+                for (String c : curCluster){
+                    MetricResponse metricResponse = _LLMSim.compare(c, s);
+                    if (metricResponse == null){
+                        continue;
+                    }
+                    if (metricResponse.score < 0.5){
+                        merge = false;
+                        break;
+                    }
+                }
+                if (merge){
+                    curCluster.add(s);
+                    traversed.add(s);
+                }
+            }
+            ret.add(curCluster);
+            for (List<String> group : ret){
+                System.out.println(group);
+            }
+        }
+        return ret;
+    }
+
+    public List<String> typer(String input){
+        List<String> ret = new ArrayList<>();
+        List<String> query = new ArrayList<>();
+        query.add(input);
+        String title = WikiHandler.getTitlesFromQuery(query).get(0);
+
+        List<String> catesA = WikiHandler.getInfoFromTitle(title).categories;
+
+        if (catesA.size() == 1){
+            catesA.addAll(WikiHandler.getParentCategory(catesA.get(0), _conn));
+        }
+
+
+        for (int i = 0; i < K; i++){
+
+        }
+
+        List<String> catesAFull = extract(catesA, 0, 0);
+
+
+        List<String> detA = new ArrayList<>();
+        List<String> detAFull = new ArrayList<>();
+        for (String ca : getFilteredNouns(catesA)){
+            double scoreTerm = Math.max(getLLMScore(ca, input), getLLMScore(input, ca));
+            double scoreTitle = Math.max(getLLMScore(ca, title), getLLMScore(title, ca));;
+            //if (scoreTerm < 0.8 && scoreTitle < 0.8){
+                detA.add(ca);
+            //}
+        }
+        for (String ca : getFilteredNouns(catesAFull)){
+            double scoreTerm = Math.max(getLLMScore(ca, input), getLLMScore(input, ca));
+            double scoreTitle = Math.max(getLLMScore(ca, title), getLLMScore(title, ca));;
+            //if (scoreTerm < 0.8 && scoreTitle < 0.8){
+                detAFull.add(ca);
+            //}
+        }
+        List<String> confidenceSet = new ArrayList<>();
+        for (String s : detA){
+            confidenceSet.add(depluralizePhrase(s));
+        }
+        for (String s : detAFull){
+            confidenceSet.add(depluralizePhrase(s));
+        }
+
+        int maxScore = 0;
+        String chosen = "";
+        for (String[] typeGroup : types) {
+            for (String type : typeGroup) {
+                for (String sa : detAFull) {
+                    sa = depluralizePhrase(sa);
+                    String sb = depluralizePhrase(type);
+                    if (getLLMScore(sa, sb) > 0.9) {
+                        int curScore = 0;
+                        for (String da : confidenceSet){
+                            if (getLLMScore(da, sa) > 0.9 || getLLMScore(sa, da) > 0.9){
+                                curScore ++;
+                            }
+                        }
+                        if (curScore > maxScore){
+                            maxScore = curScore;
+                            chosen = type;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        ret.add(chosen);
+        //System.out.println(confidenceSet);
+        //System.out.println();
+        //System.out.println(getFilteredNouns(catesAFull));
+        //System.out.println(catesAFull);
+        List<String> person = new ArrayList<>();
+        List<String> organization = new ArrayList<>();
+        List<String> place = new ArrayList<>();
+        List<String> event = new ArrayList<>();
+        for (String s : catesA){
+            isCoarseTypeHelper(s, "People", 0, person);
+            isCoarseTypeHelper(s, "Organizations", 0, organization);
+            isCoarseTypeHelper(s, "Places", 0, place);
+            isCoarseTypeHelper(s, "Events", 0, event);
+        }
+        System.out.println("People: " + person);
+        System.out.println("Org: " + organization);
+        System.out.println("PLA: " + place);
+        System.out.println("Event: " + event);
+
+        return ret;
+    }
+
+
+    public boolean isCoarseTypeHelper(String cur, String target, int level, List<String> outputs){
+        System.out.println("Level " + level);
+        if (level > 7){
+            return false;
+        }
+        List<String> cats = WikiHandler.getParentCategory(cur, _conn);
+        int fitCount = 0;
+        for (String s : cats){
+            if (s.toLowerCase().equals(target.toLowerCase())){
+                outputs.add(s);
+                return true;
+            }
+            if (isCoarseTypeHelper(s, target, level + 1, outputs)){
+                fitCount ++;
+            }
+        }
+        if (((double)fitCount / (double)cats.size()) >= 0.5){
+            outputs.add(cur);
+            return true;
+        }
+        return false;
+    }
+
 }
