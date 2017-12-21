@@ -42,6 +42,7 @@ public class FeatureExtractor {
     public Metric _LLMSim = null;
     public NameConverter _nameConverter = null;
     public Connection _conn = null;
+    Map<String, Pair<String, List<String>>> _preprocessed = null;
     int NUM_OF_DOCS = 5510659;
     int K = 2;
     public static final Set<String> INVALID_CATEGORY_HEAD = new HashSet<String>();
@@ -68,6 +69,7 @@ public class FeatureExtractor {
         //_idfManager = new IdfManager();
         _stopWord = new StopWord(true);
         _nameConverter = new DefaultNameConverter();
+        _preprocessed = preprocessTypes();
         try {
             _wordSim = new WordSim(new SimConfigurator().getConfig(new ResourceManager("taxonomic-relations/src/main/config/configurations.properties")), "paragram");
             _LLMSim = new LLMStringSim("taxonomic-relations/src/main/config/configurations.properties");
@@ -783,64 +785,46 @@ public class FeatureExtractor {
     public List<String> getFilteredNouns(List<String> inputs){
         List<String> retTmp = new ArrayList<>();
         for (String i : inputs) {
-            TextAnnotationBuilder tab;
-            boolean splitOnHyphens = false;
-            tab = new TokenizerTextAnnotationBuilder(new StatefulTokenizer(splitOnHyphens));
-            TextAnnotation ta = tab.createTextAnnotation("", "", i);
-            try {
-                ta.addView(_posAnnotator);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            String cur = "";
-            for (Constituent c : ta.getView(ViewNames.POS)) {
-                if (c.getLabel().startsWith("IN")){
-                    break;
-                }
-                if (c.getLabel().startsWith("NNS")) {
-                    cur += c.toString() + " ";
-                }
-            }
-            if (cur.length() > 0){
-                cur = cur.substring(0, cur.length() - 1);
-            }
-            boolean skipCur = false;
-            for (String skip: skipWordList){
-                if (cur.toLowerCase().contains(skip.toLowerCase())){
-                    skipCur = true;
-                }
-            }
-            if (skipCur){
-                continue;
-            }
-            retTmp.add(cur);
-        }
-        List<String> retFinal = new ArrayList<>();
-        for (String s : retTmp){
-            TextAnnotationBuilder tab;
-            boolean splitOnHyphens = false;
-            tab = new TokenizerTextAnnotationBuilder(new StatefulTokenizer(splitOnHyphens));
-            TextAnnotation ta = tab.createTextAnnotation("", "", s);
-            if (s.length() == 0){
-                continue;
-            }
-            try {
-                ta.addView(_posAnnotator);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            String cur = "";
-            for (Constituent c : ta.getView(ViewNames.POS)) {
-                if (c.getLabel().contains("S")){
-                    cur += c.toString() + " ";
-                }
-            }
-            if (cur.length() > 0){
-                cur = cur.substring(0, cur.length() - 1);
-                retFinal.add(cur);
+            String filtered = getFilteredNoun(i);
+            if (!filtered.equals("")) {
+                retTmp.add(filtered);
             }
         }
         return retTmp;
+    }
+
+    public String getFilteredNoun(String i){
+        TextAnnotationBuilder tab;
+        boolean splitOnHyphens = false;
+        tab = new TokenizerTextAnnotationBuilder(new StatefulTokenizer(splitOnHyphens));
+        TextAnnotation ta = tab.createTextAnnotation("", "", i);
+        try {
+            ta.addView(_posAnnotator);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        String cur = "";
+        for (Constituent c : ta.getView(ViewNames.POS)) {
+            if (c.getLabel().startsWith("IN")){
+                break;
+            }
+            if (c.getLabel().startsWith("NN")) {
+                cur += c.toString() + " ";
+            }
+        }
+        if (cur.length() > 0){
+            cur = cur.substring(0, cur.length() - 1);
+        }
+        boolean skipCur = false;
+        for (String skip: skipWordList){
+            if (cur.toLowerCase().contains(skip.toLowerCase())){
+                skipCur = true;
+            }
+        }
+        if (skipCur){
+            return "";
+        }
+        return cur;
     }
 
     public List<Double> getLLMSim(List<String> catsA, List<String> catsB){
@@ -933,7 +917,7 @@ public class FeatureExtractor {
     String[] organization = new String[]{"educational institution", "terrorism", "military", "fraternities and sororities", "sports league", "sports team", "political party", "stock exchange", "government agency", "airline", "railway", "news agency"};
     String[] work_of_art = new String[]{"play", "music", "broadcast_programming", "film", "newspaper"};
     String[] facility = new String[]{"restaurant", "sports venue", "library", "hospital", "airport", "power station", "hotel", "bridge", "dam", "theater"};
-    String[] person = new String[]{"politician", "coach", "sportspeople", "clergy", "architect", "engineer", "author", "physician", "surgeon", "soldier", "monarch", "film director", "actor", "musician"};
+    String[] person = new String[]{"politician", "coach", "sportsmen", "clergy", "architect", "engineer", "author", "physician", "surgeon", "soldier", "monarch", "film director", "actor", "musician"};
     String[] medicine = new String[]{"symptom", "therapy", "drug"};
     String[] event = new String[]{"Natural disaster", "election", "Sports events", "war", "protest", "Terrorist incidents"};
     String[] product = new String[]{"food", "engine", "camera", "train", "mobile phone", "car", "ship", "computer", "airplane", "weapon"};
@@ -942,7 +926,7 @@ public class FeatureExtractor {
 
     public Map<String, Pair<String, List<String>>> preprocessTypes(){
         Map<String, Pair<String, List<String>>> ret = new HashMap<>();
-        for (String[] typeGroup : types){
+        for (String[] typeGroup : typeIdentifier){
             for (String type : typeGroup){
                 List<String> query = new ArrayList<>();
                 query.add(type);
@@ -1014,21 +998,33 @@ public class FeatureExtractor {
             catesA.addAll(WikiHandler.getParentCategory(catesA.get(0), _conn));
         }
 
+        List<String> catesAFull = extract(catesA, 0, 0);
+
         List<List<String>> outputs = new ArrayList<>();
         for (int i = 0; i < 4; i++){
             outputs.add(new ArrayList<String>());
         }
         int[] count = new int[]{0, 0, 0, 0};
         Map<String, boolean[]> results = new HashMap<>();
+        int idxCount = 0;
+        Map<String, String> printMap = new HashMap<>();
+        printMap.put("People", "0-1000");
+        printMap.put("Organizations", "1-0100");
+        printMap.put("Places", "2-0010");
+        printMap.put("Events", "3-0001");
+        List<Pair<Integer, Integer>> edges = new ArrayList<>();
         for (String s : catesA){
-            boolean[] result = isCoarseTypeHelperConcur(s, 0, outputs);
+            boolean[] result = isCoarseTypeHelperConcur(s, 0, outputs, printMap, edges);
             results.put(s, result);
             for (int i = 0; i < result.length; i++){
                 if (result[i]){
                     count[i] += 1;
                 }
             }
+            idxCount ++;
+            System.out.println("Processed: " + idxCount + "/" + catesA.size());
         }
+
         int maxCountIdx = 0;
         int maxCount = count[0];
         for (int i = 1; i < count.length; i++){
@@ -1039,12 +1035,10 @@ public class FeatureExtractor {
         }
         Set<String> keywords = new HashSet<>(getFilteredNouns(outputs.get(maxCountIdx)));
 
-
-
         List<String> detA = new ArrayList<>();
         for (String s : results.keySet()){
             if (results.get(s)[maxCountIdx]){
-                detA.add(s);
+                detA.add(getFilteredNoun(s));
             }
         }
         List<String> detAFull = new ArrayList<>(keywords);
@@ -1058,28 +1052,59 @@ public class FeatureExtractor {
             confidenceSet.add(depluralizePhrase(s));
         }
 
-        int maxScore = 0;
+        double maxScore = 0.0;
         String chosen = "";
         for (String type : typeIdentifier[maxCountIdx]) {
-            for (String sa : detAFull) {
-                sa = depluralizePhrase(sa);
-                String sb = depluralizePhrase(type);
-                if (getLLMScore(sa, sb) > 0.9) {
-                    int curScore = 0;
-                    for (String da : confidenceSet){
-                        if (getLLMScore(da, sa) > 0.9 || getLLMScore(sa, da) > 0.9){
-                            curScore ++;
-                        }
-                    }
-                    if (curScore > maxScore){
-                        maxScore = curScore;
-                        chosen = type;
-                    }
-                    break;
+            double curTypeScore = 0.0;
+            List<String> detB = new ArrayList<>(_preprocessed.get(type).getSecond());
+            detB.add(_preprocessed.get(type).getFirst());
+            for (String sa : confidenceSet) {
+                for (String typeDet : detB) {
+                    String sb = depluralizePhrase(typeDet);
+                    curTypeScore += getLLMScore(sb, sa) + getLLMScore(sa, sb);
                 }
+            }
+            if (curTypeScore > maxScore){
+                chosen = type;
+                maxScore = curTypeScore;
             }
         }
         ret.add(chosen);
+        /*
+        String nodeString = "";
+        for (String key : printMap.keySet()){
+            String val = printMap.get(key);
+            int signal = Integer.parseInt(val.split("-")[1]);
+            String tag = "[NOISE]";
+            if (signal >= 1000){
+                tag = "[PER]";
+            }
+            key = key.replace("'", "");
+            nodeString += "{id: " + val.split("-")[0] +
+                     ", label: '" + key + " " + tag + "'},";
+        }
+        int idx = printMap.keySet().size();
+        nodeString += "{id: " + idx +
+                ", label: '" + "Lebron James [START]'}";
+
+        String edgeString = "";
+        for (Pair<Integer, Integer> edge : edges){
+            edgeString += "{from: " + edge.getFirst() + ", to: " + edge.getSecond() + "},";
+        }
+        for (String ca : catesA){
+            edgeString += "{from: " + idx + ", to: " + printMap.get(ca).split("-")[0] + "},";
+        }
+        System.out.println(nodeString);
+        System.out.println(edgeString);
+        */
+        /*
+        for (String s : catesAFull){
+            if (!outputs.get(maxCountIdx).contains(s)){
+                System.out.println(s);
+            }
+        }
+        System.out.println(confidenceSet);
+        */
 
         return ret;
     }
@@ -1127,8 +1152,12 @@ public class FeatureExtractor {
         return score;
     }
 
-    public boolean[] isCoarseTypeHelperConcur(String cur, int level, List<List<String>> outputs){
+    public boolean[] isCoarseTypeHelperConcur(String cur, int level, List<List<String>> outputs, Map<String, String> printMap, List<Pair<Integer, Integer>> edges){
         if (level > 9){
+            if (!printMap.containsKey(cur)) {
+                int idx = printMap.keySet().size();
+                //printMap.put(cur, Integer.toString(idx) + "-0000");
+            }
             return new boolean[]{false, false, false, false};
         }
         List<String> catsRaw = WikiHandler.getParentCategory(cur, _conn);
@@ -1177,19 +1206,52 @@ public class FeatureExtractor {
                 outputs.get(idx).add(cur);
             }
         }
-        for (boolean b : initialRet){
-            if (b){
-                return initialRet;
+        boolean retFlag = false;
+        int signal = 0;
+        int curIdx = 0;
+        if (printMap.containsKey(cur)){
+            curIdx = Integer.parseInt(printMap.get(cur).split("-")[0]);
+        }
+        else {
+            curIdx = printMap.keySet().size();
+        }
+        for (int i = 0; i < initialRet.length; i++){
+            if (initialRet[i]){
+                signal += Math.pow(10, (initialRet.length - i - 1));
+                if (level < 3) {
+                    edges.add(new Pair<>(curIdx, i));
+                }
+                retFlag = true;
             }
         }
+        if (retFlag){
+            String sig = Integer.toString(signal);
+            while (sig.length() < fitCount.length){
+                sig = "0" + sig;
+            }
+            if (level < 4) {
+                printMap.put(cur, Integer.toString(curIdx) + "-" + sig);
+            }
+            return initialRet;
+        }
         for (String s : cats){
-
-            boolean[] result = (isCoarseTypeHelperConcur(s, level + 1, outputs));
+            boolean[] result = (isCoarseTypeHelperConcur(s, level + 1, outputs, printMap, edges));
             for (int i = 0; i < result.length; i++){
-
                 if (result[i]){
                     fitCount[i] += 1;
                 }
+            }
+        }
+        curIdx = 0;
+        if (printMap.containsKey(cur)){
+            curIdx = Integer.parseInt(printMap.get(cur).split("-")[0]);
+        }
+        else {
+            curIdx = printMap.keySet().size();
+        }
+        if (level < 3) {
+            for (String s : cats) {
+                edges.add(new Pair<>(curIdx, Integer.parseInt(printMap.get(s).split("-")[0])));
             }
         }
         int maxCountIdx = 0;
@@ -1202,10 +1264,23 @@ public class FeatureExtractor {
         }
         if (((double)fitCount[maxCountIdx] / (double)cats.size()) >= 0.5){
             initialRet[maxCountIdx] = true;
+            String sig = Integer.toString(((Double)Math.pow(10, fitCount.length - maxCountIdx - 1)).intValue());
+            while (sig.length() < fitCount.length){
+                sig = "0" + sig;
+            }
+            if (level < 4) {
+                printMap.put(cur, curIdx + "-" + sig);
+            }
             if (level < 3) {
                 outputs.get(maxCountIdx).add(cur);
             }
         }
+        else {
+            if (level < 4) {
+                printMap.put(cur, curIdx + "-0000");
+            }
+        }
+
         return initialRet;
     }
 

@@ -10,6 +10,9 @@ package org.cogcomp.taxorel;
 import org.cogcomp.taxorel.lbjGen.AFRelationClassifier;
 import org.cogcomp.taxorel.lbjGen.Label;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -209,35 +212,28 @@ public class AllTest {
 
     }
 
+    public static void testFIGER() throws IOException{
+        MentionReader mentionReader = MentionReader.getMentionReader("data/FIGER/train.data.gz");
+        EntityProtos.Mention m;
+        FeatureExtractor featureExtractor = new FeatureExtractor();
+        BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter("data/FIGER/init.out.txt"));
+        while ((m = mentionReader.readMention()) != null){
+            bufferedWriter.write(m.getEntityName() + " : " + featureExtractor.typer(m.getEntityName()) + " : " + m.getLabelsList() + "\n");
+        }
+        bufferedWriter.close();
+    }
+
     public static void main(String[] args) {
         //simpleClassifierTest();
         //testWithConstraints();
         //featureExtractionTest();
-        //FeatureExtractor.mostMatch("A", "V-C");
-
-        FeatureExtractor featureExtractor = new FeatureExtractor();
-        //System.out.println(featureExtractor._LLMSim.compare("feminists", "writers"));
-        //System.out.println(English.plural("actors", 2));
-        //NameConverter nameConverter = new DefaultNameConverter();
-        //List<String> newQuery = new ArrayList<>();
-        //newQuery.add("st.louis university");
-        //System.out.println(WikiHandler.getTitlesFromQuery(newQuery));
-        //System.out.println(featureExtractor._wordSim.compare("countries", "country").score);
-        //System.out.println(featureExtractor._wordSim.compare("actor", "actresses").score);
-        //System.out.println(WikiHandler.getContentByTitle("List_of_rivers_by_discharge"));
-        //System.out.println(WikiHandler.getParentCategory("Capitals"));
-        //System.out.println(WikiHandler.getInfoFromTitle("Marguerite Zorach").categories);
-        //List<String> test = new ArrayList<>();
-        //test.add("Multiple myeloma");
-        //System.out.println(featureExtractor.extract(test, 0, 0));
-        //Instance i = new Instance("Obama", "university");
-        //System.out.println(featureExtractor.settleEntity(i.entity1, i.entity2, new ArrayList<>(), new ArrayList<>()));
-        System.out.println(featureExtractor.typer("George W. Bush"));
         try {
-            //generateIntermediateFile("data/jupiter/DataI/test", "data/jupiter/DataI/train.new.2.inter", 0);
+            testFIGER();
         }
         catch (Exception e){
             e.printStackTrace();
         }
+        //FeatureExtractor featureExtractor = new FeatureExtractor();
+        //System.out.println(featureExtractor.typer("LeBron James"));
     }
 }
