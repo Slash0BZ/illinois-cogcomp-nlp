@@ -47,7 +47,7 @@ public class FeatureExtractor {
     int K = 2;
     public static final Set<String> INVALID_CATEGORY_HEAD = new HashSet<String>();
     public static String[] skipWords = {"establishments", "births", "deaths", "stub", "history", "family", "person", "people", "events", "articles"};
-    public static String[] skipWordsForParents = {"articles"};
+    public static String[] skipWordsForParents = {"articles", "categories", "category"};
     List<String> skipWordList;
     static {
         INVALID_CATEGORY_HEAD.add("name");
@@ -913,16 +913,16 @@ public class FeatureExtractor {
         }
         return 0.0;
     }
-    String[] locations = new String[]{"country", "county", "park", "province", "cemetery", "glacier", "astral body", "island", "body of water", "mountain"};
+    String[] locations = new String[]{"country", "county", "city", "park", "province", "cemetery", "glacier", "astral body", "island", "body of water", "mountain"};
     String[] organization = new String[]{"educational institution", "terrorism", "military", "fraternities and sororities", "sports league", "sports team", "political party", "stock exchange", "government agency", "airline", "railway", "news agency"};
     String[] work_of_art = new String[]{"play", "music", "broadcast_programming", "film", "newspaper"};
     String[] facility = new String[]{"restaurant", "sports venue", "library", "hospital", "airport", "power station", "hotel", "bridge", "dam", "theater"};
-    String[] person = new String[]{"politician", "coach", "sportsmen", "clergy", "architect", "engineer", "author", "physician", "surgeon", "soldier", "monarch", "film director", "actor", "musician"};
+    String[] person = new String[]{"politician", "coach", "athlete", "clergy", "architect", "engineer", "author", "physician", "surgeon", "soldier", "monarch", "film director", "actor", "musician"};
     String[] medicine = new String[]{"symptom", "therapy", "drug"};
     String[] event = new String[]{"Natural disaster", "election", "Sports events", "war", "protest", "Terrorist incidents"};
     String[] product = new String[]{"food", "engine", "camera", "train", "mobile phone", "car", "ship", "computer", "airplane", "weapon"};
     String[][] types = new String[][]{locations, organization, work_of_art, facility, person, medicine, event, product};
-    String[][] typeIdentifier = new String[][]{person, organization, ObjectArrays.concat(locations, facility, String.class), event};
+    String[][] typeIdentifier = new String[][]{person, organization, ObjectArrays.concat(locations, facility, String.class), event, product, work_of_art};
 
     public Map<String, Pair<String, List<String>>> preprocessTypes(){
         Map<String, Pair<String, List<String>>> ret = new HashMap<>();
@@ -990,7 +990,11 @@ public class FeatureExtractor {
         List<String> ret = new ArrayList<>();
         List<String> query = new ArrayList<>();
         query.add(input);
-        String title = WikiHandler.getTitlesFromQuery(query).get(0);
+        List<String> titleList = WikiHandler.getTitlesFromQuery(query);
+        if (titleList.size() == 0){
+            return ret;
+        }
+        String title = titleList.get(0);
 
         List<String> catesA = WikiHandler.getInfoFromTitle(title).categories;
 
@@ -1001,17 +1005,22 @@ public class FeatureExtractor {
         List<String> catesAFull = extract(catesA, 0, 0);
 
         List<List<String>> outputs = new ArrayList<>();
-        for (int i = 0; i < 4; i++){
+        for (int i = 0; i < typeIdentifier.length; i++){
             outputs.add(new ArrayList<String>());
         }
-        int[] count = new int[]{0, 0, 0, 0};
+        int[] count = new int[outputs.size()];
+        for (int i = 0; i < count.length; i++){
+            count[i] = 0;
+        }
         Map<String, boolean[]> results = new HashMap<>();
         int idxCount = 0;
         Map<String, String> printMap = new HashMap<>();
-        printMap.put("People", "0-1000");
-        printMap.put("Organizations", "1-0100");
-        printMap.put("Places", "2-0010");
-        printMap.put("Events", "3-0001");
+        printMap.put("People", "0-100000");
+        printMap.put("Organizations", "1-010000");
+        printMap.put("Places", "2-001000");
+        printMap.put("Events", "3-000100");
+        printMap.put("Manufactured goods", "4-000010");
+        printMap.put("Culture", "5-000001");
         List<Pair<Integer, Integer>> edges = new ArrayList<>();
         for (String s : catesA){
             boolean[] result = isCoarseTypeHelperConcur(s, 0, outputs, printMap, edges);
@@ -1023,6 +1032,8 @@ public class FeatureExtractor {
             }
             idxCount ++;
             System.out.println("Processed: " + idxCount + "/" + catesA.size());
+            System.out.println(s);
+            System.out.println(result[0] + " " + result[1] + " " + result[2] + " " + result[3] + " " + result[4] + " " + result[5]);
         }
 
         int maxCountIdx = 0;
@@ -1032,6 +1043,9 @@ public class FeatureExtractor {
                 maxCountIdx = i;
                 maxCount = count[i];
             }
+        }
+        if ((double)maxCount / (double)catesA.size() < 0.1){
+            return ret;
         }
         Set<String> keywords = new HashSet<>(getFilteredNouns(outputs.get(maxCountIdx)));
 
@@ -1053,15 +1067,40 @@ public class FeatureExtractor {
         }
 
         double maxScore = 0.0;
+        String coarse = "";
         String chosen = "";
+        if (maxCountIdx == 0){
+            coarse = "Person:";
+        }
+        if (maxCountIdx == 1){
+            coarse = "Organizations:";
+        }
+        if (maxCountIdx == 2){
+            coarse = "Places:";
+        }
+        if (maxCountIdx == 3){
+            coarse = "Events:";
+        }
+        if (maxCountIdx == 4){
+            coarse = "Products:";
+        }
+        if (maxCountIdx == 5){
+            coarse = "Culture:";
+        }
+
         for (String type : typeIdentifier[maxCountIdx]) {
             double curTypeScore = 0.0;
-            List<String> detB = new ArrayList<>(_preprocessed.get(type).getSecond());
+            List<String> detB = new ArrayList<>();
             detB.add(_preprocessed.get(type).getFirst());
+            detB.add(type);
+            detB = getFilteredNouns(detB);
             for (String sa : confidenceSet) {
                 for (String typeDet : detB) {
                     String sb = depluralizePhrase(typeDet);
-                    curTypeScore += getLLMScore(sb, sa) + getLLMScore(sa, sb);
+                    double curItemScore = getLLMScore(sa, sb);
+                    if (curItemScore > 0.8){
+                        curTypeScore += curItemScore;
+                    }
                 }
             }
             if (curTypeScore > maxScore){
@@ -1069,8 +1108,8 @@ public class FeatureExtractor {
                 maxScore = curTypeScore;
             }
         }
-        ret.add(chosen);
-        /*
+        ret.add(coarse + chosen);
+
         String nodeString = "";
         for (String key : printMap.keySet()){
             String val = printMap.get(key);
@@ -1085,7 +1124,7 @@ public class FeatureExtractor {
         }
         int idx = printMap.keySet().size();
         nodeString += "{id: " + idx +
-                ", label: '" + "Lebron James [START]'}";
+                ", label: '" + "Category:Summer_Olympics_medalists [START]'}";
 
         String edgeString = "";
         for (Pair<Integer, Integer> edge : edges){
@@ -1096,7 +1135,7 @@ public class FeatureExtractor {
         }
         System.out.println(nodeString);
         System.out.println(edgeString);
-        */
+
         /*
         for (String s : catesAFull){
             if (!outputs.get(maxCountIdx).contains(s)){
@@ -1153,7 +1192,7 @@ public class FeatureExtractor {
     }
 
     public boolean[] isCoarseTypeHelperConcur(String cur, int level, List<List<String>> outputs, Map<String, String> printMap, List<Pair<Integer, Integer>> edges){
-        if (level > 9){
+        if (level > 7){
             if (!printMap.containsKey(cur)) {
                 int idx = printMap.keySet().size();
                 //printMap.put(cur, Integer.toString(idx) + "-0000");
@@ -1174,23 +1213,29 @@ public class FeatureExtractor {
                 cats.add(s);
             }
         }
-        int[] fitCount = new int[]{0, 0, 0, 0};
-        boolean[] initialRet = new boolean[]{false, false, false, false};
-        if (cats.contains("People")){
+        int[] fitCount = new int[outputs.size()];
+        for (int i = 0; i < fitCount.length; i++){
+            fitCount[i] = 0;
+        }
+        boolean[] initialRet = new boolean[outputs.size()];
+        for (int i = 0; i < initialRet.length; i++){
+            initialRet[i] = false;
+        }
+        if (cats.contains("People") || cur.equals("People")){
             int idx = 0;
             initialRet[idx] = true;
             if (level < 3) {
                 outputs.get(idx).add(cur);
             }
         }
-        if (cats.contains("Organizations")){
+        if (cats.contains("Organizations") || cur.equals("Organizations")){
             int idx = 1;
             initialRet[idx] = true;
             if (level < 3) {
                 outputs.get(idx).add(cur);
             }
         }
-        if (cats.contains("Places")){
+        if (cats.contains("Places") || cur.equals("Places")){
             int idx = 2;
             initialRet[idx] = true;
             initialRet[idx] = true;
@@ -1198,8 +1243,24 @@ public class FeatureExtractor {
                 outputs.get(idx).add(cur);
             }
         }
-        if (cats.contains("Events")){
+        if (cats.contains("Events") || cur.equals("Events")){
             int idx = 3;
+            initialRet[idx] = true;
+            initialRet[idx] = true;
+            if (level < 3) {
+                outputs.get(idx).add(cur);
+            }
+        }
+        if (cats.contains("Manufactured goods") || cur.equals("Manufactured goods")|| cats.contains("Technology") || cur.equals("Technology")){
+            int idx = 4;
+            initialRet[idx] = true;
+            initialRet[idx] = true;
+            if (level < 3) {
+                outputs.get(idx).add(cur);
+            }
+        }
+        if (cats.contains("Culture") || cur.equals("Culture")){
+            int idx = 5;
             initialRet[idx] = true;
             initialRet[idx] = true;
             if (level < 3) {
@@ -1218,7 +1279,7 @@ public class FeatureExtractor {
         for (int i = 0; i < initialRet.length; i++){
             if (initialRet[i]){
                 signal += Math.pow(10, (initialRet.length - i - 1));
-                if (level < 3) {
+                if (level < 4) {
                     edges.add(new Pair<>(curIdx, i));
                 }
                 retFlag = true;
@@ -1229,7 +1290,7 @@ public class FeatureExtractor {
             while (sig.length() < fitCount.length){
                 sig = "0" + sig;
             }
-            if (level < 4) {
+            if (level < 5) {
                 printMap.put(cur, Integer.toString(curIdx) + "-" + sig);
             }
             return initialRet;
@@ -1242,14 +1303,13 @@ public class FeatureExtractor {
                 }
             }
         }
-        curIdx = 0;
         if (printMap.containsKey(cur)){
             curIdx = Integer.parseInt(printMap.get(cur).split("-")[0]);
         }
         else {
             curIdx = printMap.keySet().size();
         }
-        if (level < 3) {
+        if (level < 4) {
             for (String s : cats) {
                 edges.add(new Pair<>(curIdx, Integer.parseInt(printMap.get(s).split("-")[0])));
             }
@@ -1268,7 +1328,7 @@ public class FeatureExtractor {
             while (sig.length() < fitCount.length){
                 sig = "0" + sig;
             }
-            if (level < 4) {
+            if (level < 5) {
                 printMap.put(cur, curIdx + "-" + sig);
             }
             if (level < 3) {
@@ -1276,7 +1336,7 @@ public class FeatureExtractor {
             }
         }
         else {
-            if (level < 4) {
+            if (level < 5) {
                 printMap.put(cur, curIdx + "-0000");
             }
         }

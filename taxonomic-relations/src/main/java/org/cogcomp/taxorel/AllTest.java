@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 /**
  * @author xuany
@@ -216,11 +217,15 @@ public class AllTest {
         MentionReader mentionReader = MentionReader.getMentionReader("data/FIGER/train.data.gz");
         EntityProtos.Mention m;
         FeatureExtractor featureExtractor = new FeatureExtractor();
-        BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter("data/FIGER/init.out.txt"));
+        Random random = new Random();
         while ((m = mentionReader.readMention()) != null){
+            if (random.nextDouble() > 0.01){
+                continue;
+            }
+            BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter("data/FIGER/improved.2.out.txt", true));
             bufferedWriter.write(m.getEntityName() + " : " + featureExtractor.typer(m.getEntityName()) + " : " + m.getLabelsList() + "\n");
+            bufferedWriter.close();
         }
-        bufferedWriter.close();
     }
 
     public static void main(String[] args) {
@@ -228,12 +233,12 @@ public class AllTest {
         //testWithConstraints();
         //featureExtractionTest();
         try {
-            testFIGER();
+            //testFIGER();
         }
         catch (Exception e){
             e.printStackTrace();
         }
-        //FeatureExtractor featureExtractor = new FeatureExtractor();
-        //System.out.println(featureExtractor.typer("LeBron James"));
+        FeatureExtractor featureExtractor = new FeatureExtractor();
+        System.out.println(featureExtractor.typer("Category:Arts_award_winners"));
     }
 }
