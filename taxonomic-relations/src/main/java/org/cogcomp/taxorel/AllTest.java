@@ -164,23 +164,6 @@ public class AllTest {
         int i = 1;
 
         FeatureExtractor featureExtractor = new FeatureExtractor();
-        /*
-        for (Instance instance : arrInputInstances) {
-            ArrayList<Instance> arrOutputInstances = new ArrayList<Instance>();
-
-            System.out.println(i - 1 + "/" + totalSize + " done.");
-            System.out.println("Starting: " + instance.entity1 + " - "
-                    + instance.entity2);
-            if (i > startIdx) {
-                featureExtractor.extractInstance(instance);
-                arrOutputInstances.add(instance);
-                ArrayList<String> arrStringInstances = DataHandler.makeStringInstances(
-                        arrOutputInstances, Constants.INPUT_TYPE_INTERMEDIATE);
-                DataHandler.writeLines(arrStringInstances, output);
-            }
-            i++;
-        }
-        */
         int count = 0;
         int correct = 0;
         for (Instance instance : arrInputInstances){
@@ -204,7 +187,7 @@ public class AllTest {
                 arrOutputInstances.add(instance);
                 ArrayList<String> arrStringInstances = DataHandler.makeStringInstances(
                         arrOutputInstances, Constants.INPUT_TYPE_INTERMEDIATE);
-                //DataHandler.writeLines(arrStringInstances, "data/jupiter/DataI/test.errors");
+                DataHandler.writeLines(arrStringInstances, output);
             }
             System.out.println("Current Acc: " + (double)correct / (double)count);
             System.out.println();
@@ -222,7 +205,7 @@ public class AllTest {
             if (random.nextDouble() > 0.01){
                 continue;
             }
-            BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter("data/FIGER/improved.2.out.txt", true));
+            BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter("data/FIGER/improved.3.out.txt", true));
             bufferedWriter.write(m.getEntityName() + " : " + featureExtractor.typer(m.getEntityName()) + " : " + m.getLabelsList() + "\n");
             bufferedWriter.close();
         }
@@ -238,7 +221,15 @@ public class AllTest {
         catch (Exception e){
             e.printStackTrace();
         }
-        FeatureExtractor featureExtractor = new FeatureExtractor();
-        System.out.println(featureExtractor.typer("Category:Arts_award_winners"));
+        //FeatureExtractor featureExtractor = new FeatureExtractor();
+        //System.out.println(featureExtractor.settleEntity("Lebron James", "athlete", new ArrayList<>(), new ArrayList<>()));
+        //System.out.println(featureExtractor.typer("Lebron James"));
+        //WikiHandler.exportToMapDB();
+        try {
+            generateIntermediateFile("data/jupiter/DataII/test", "data/jupiter/DataII/test.errors", 0);
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
     }
 }

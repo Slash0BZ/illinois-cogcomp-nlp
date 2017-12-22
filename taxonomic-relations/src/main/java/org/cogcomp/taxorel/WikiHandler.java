@@ -9,15 +9,17 @@ package org.cogcomp.taxorel;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.mapdb.DB;
+import org.mapdb.DBMaker;
+import org.mapdb.HTreeMap;
+import org.mapdb.Serializer;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.sql.*;
 import java.util.*;
 
 /**
@@ -164,6 +166,27 @@ public class WikiHandler {
         return getInfoFromTitle(request).categories;
     }
 
+    public static List<String> getParentCategoryViaMapDB(String category, HTreeMap<String, String> map){
+        List<String> ret = new ArrayList<>();
+        String normalized = category.replace(" ", "_");
+        String combined = map.get(normalized);
+        if (combined == null){
+            String request = "Category:" + category;
+            return getInfoFromTitle(request).categories;
+        }
+        String[] subcats = combined.split("\\|\\|");
+        for (String subcat : subcats){
+            if (subcat.length() > 0){
+                ret.add(subcat);
+            }
+        }
+        if (ret.size() > 0){
+            return ret;
+        }
+        String request = "Category:" + category;
+        return getInfoFromTitle(request).categories;
+    }
+
     public static List<String> getDaughtersCategory(String category){
         JSONObject jsonObject = null;
         try {
@@ -272,5 +295,25 @@ public class WikiHandler {
             result.put(entry.getKey(), entry.getValue());
         }
         return result;
+    }
+
+    public static void exportToMapDB(){
+        DB db = DBMaker.fileDB("data/FIGER/category.db").closeOnJvmShutdown().fileMmapEnableIfSupported().make();
+        HTreeMap<String, String> map = db.hashMap("category").keySerializer(Serializer.STRING).valueSerializer(Serializer.STRING).create();
+        try {
+            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost/wiki", "root", "zhouxy960914");
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery("SELECT CONVERT(category.cat_title USING utf8), CONVERT (category.super_cats USING utf8) FROM category");
+            while (rs.next()){
+                String cat = (String)rs.getObject(1);
+                String superCat = (String)rs.getObject(2);
+                map.put(cat, superCat);
+            }
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+        db.commit();
+        db.close();
     }
 }

@@ -25,6 +25,10 @@ import edu.illinois.cs.cogcomp.sim.WordSim;
 import javatools.parsers.NounGroup;
 import org.jibx.schema.codegen.extend.DefaultNameConverter;
 import org.jibx.schema.codegen.extend.NameConverter;
+import org.mapdb.DB;
+import org.mapdb.DBMaker;
+import org.mapdb.HTreeMap;
+import org.mapdb.Serializer;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -43,11 +47,13 @@ public class FeatureExtractor {
     public NameConverter _nameConverter = null;
     public Connection _conn = null;
     Map<String, Pair<String, List<String>>> _preprocessed = null;
+    DB _db = null;
+    HTreeMap<String, String> _categoryParents = null;
     int NUM_OF_DOCS = 5510659;
     int K = 2;
     public static final Set<String> INVALID_CATEGORY_HEAD = new HashSet<String>();
     public static String[] skipWords = {"establishments", "births", "deaths", "stub", "history", "family", "person", "people", "events", "articles"};
-    public static String[] skipWordsForParents = {"articles", "categories", "category"};
+    public static String[] skipWordsForParents = {"articles", "categories", "category", "list of"};
     List<String> skipWordList;
     static {
         INVALID_CATEGORY_HEAD.add("name");
@@ -79,6 +85,8 @@ public class FeatureExtractor {
             e.printStackTrace();
         }
         skipWordList = new ArrayList<>(Arrays.asList(skipWords));
+        _db = DBMaker.fileDB("data/FIGER/category.db").fileMmapEnableIfSupported().closeOnJvmShutdown().make();
+        _categoryParents = _db.hashMap("category", Serializer.STRING, Serializer.STRING).createOrOpen();
     }
 
     public void extractInstance(Instance instance){
@@ -213,7 +221,8 @@ public class FeatureExtractor {
         }
         for (String c : inputCats){
             arrCats.add(c);
-            List<String> newExtracts = WikiHandler.getParentCategory(c, _conn);
+            //List<String> newExtracts = WikiHandler.getParentCategory(c, _conn);
+            List<String> newExtracts = WikiHandler.getParentCategoryViaMapDB(c, _categoryParents);
             if (newExtracts.size() == 1){
                 arrCats.addAll(extract(newExtracts, level, counter + 1));
             }
@@ -671,10 +680,12 @@ public class FeatureExtractor {
         List<String> catesA = WikiHandler.getInfoFromTitle(titleA).categories;
         List<String> catesB = WikiHandler.getInfoFromTitle(titleB).categories;
         if (catesA.size() == 1){
-            catesA.addAll(WikiHandler.getParentCategory(catesA.get(0), _conn));
+            //catesA.addAll(WikiHandler.getParentCategory(catesA.get(0), _conn));
+            catesA.addAll(WikiHandler.getParentCategoryViaMapDB(catesA.get(0), _categoryParents));
         }
         if (catesB.size() == 1){
-            catesB.addAll(WikiHandler.getParentCategory(catesB.get(0), _conn));
+            //catesB.addAll(WikiHandler.getParentCategory(catesB.get(0), _conn));
+            catesB.addAll(WikiHandler.getParentCategoryViaMapDB(catesB.get(0), _categoryParents));
         }
 
         List<String> catesAFull = extract(catesA, 0, 0);
@@ -748,12 +759,14 @@ public class FeatureExtractor {
         List<String> cateALv2 = new ArrayList<>();
         List<String> cateBLv2 = new ArrayList<>();
         for (String c : catesA){
-            cateALv2.addAll(WikiHandler.getParentCategory(c, _conn));
+            //cateALv2.addAll(WikiHandler.getParentCategory(c, _conn));
+            cateALv2.addAll(WikiHandler.getParentCategoryViaMapDB(c, _categoryParents));
         }
         cateALv2.addAll(catesA);
 
         for (String c : catesB){
-            cateBLv2.addAll(WikiHandler.getParentCategory(c, _conn));
+            //cateBLv2.addAll(WikiHandler.getParentCategory(c, _conn));
+            cateBLv2.addAll(WikiHandler.getParentCategoryViaMapDB(c, _categoryParents));
         }
         cateBLv2.addAll(catesB);
 
@@ -917,7 +930,7 @@ public class FeatureExtractor {
     String[] organization = new String[]{"educational institution", "terrorism", "military", "fraternities and sororities", "sports league", "sports team", "political party", "stock exchange", "government agency", "airline", "railway", "news agency"};
     String[] work_of_art = new String[]{"play", "music", "broadcast_programming", "film", "newspaper"};
     String[] facility = new String[]{"restaurant", "sports venue", "library", "hospital", "airport", "power station", "hotel", "bridge", "dam", "theater"};
-    String[] person = new String[]{"politician", "coach", "athlete", "clergy", "architect", "engineer", "author", "physician", "surgeon", "soldier", "monarch", "film director", "actor", "musician"};
+    String[] person = new String[]{"politician", "coach", "sportsmen", "clergy", "architect", "engineer", "author", "physician", "surgeon", "soldier", "monarch", "film director", "actor", "musician"};
     String[] medicine = new String[]{"symptom", "therapy", "drug"};
     String[] event = new String[]{"Natural disaster", "election", "Sports events", "war", "protest", "Terrorist incidents"};
     String[] product = new String[]{"food", "engine", "camera", "train", "mobile phone", "car", "ship", "computer", "airplane", "weapon"};
@@ -1055,8 +1068,8 @@ public class FeatureExtractor {
                 detA.add(getFilteredNoun(s));
             }
         }
-        List<String> detAFull = new ArrayList<>(keywords);
-
+        //List<String> detAFull = new ArrayList<>(keywords);
+        List<String> detAFull = getFilteredNouns(outputs.get(maxCountIdx));
 
         List<String> confidenceSet = new ArrayList<>();
         for (String s : detA){
@@ -1108,8 +1121,28 @@ public class FeatureExtractor {
                 maxScore = curTypeScore;
             }
         }
+        Map<String, Integer> freq = new HashMap<>();
+        for (String s : confidenceSet){
+            //for (String s : c.split(" ")){
+                if (!freq.containsKey(s)){
+                    freq.put(s, 1);
+                }
+                else{
+                    freq.put(s, freq.get(s) + 1);
+                }
+            //}
+        }
+        freq = WikiHandler.sortByValue(freq);
+        int outputCount = 0;
+        for (String key : freq.keySet()){
+            outputCount ++;
+            if (outputCount > 3){
+                break;
+            }
+            ret.add(coarse + key);
+        }
         ret.add(coarse + chosen);
-
+        /*
         String nodeString = "";
         for (String key : printMap.keySet()){
             String val = printMap.get(key);
@@ -1135,7 +1168,7 @@ public class FeatureExtractor {
         }
         System.out.println(nodeString);
         System.out.println(edgeString);
-
+        */
         /*
         for (String s : catesAFull){
             if (!outputs.get(maxCountIdx).contains(s)){
