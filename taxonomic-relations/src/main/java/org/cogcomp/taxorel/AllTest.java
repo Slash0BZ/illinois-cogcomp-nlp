@@ -203,10 +203,11 @@ public class AllTest {
         Random random = new Random();
         while ((m = mentionReader.readMention()) != null){
             if (random.nextDouble() > 0.01){
-                continue;
+                //continue;
             }
-            BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter("data/FIGER/improved.3.out.txt", true));
-            bufferedWriter.write(m.getEntityName() + " : " + featureExtractor.typer(m.getEntityName()) + " : " + m.getLabelsList() + "\n");
+            BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter("data/FIGER/examples.txt", true));
+            //bufferedWriter.write(m.getEntityName() + " : " + featureExtractor.typer(m.getEntityName()) + " : " + m.getLabelsList() + "\n");
+            bufferedWriter.write(m.getEntityName() + "\n");
             bufferedWriter.close();
         }
     }
@@ -216,17 +217,17 @@ public class AllTest {
         //testWithConstraints();
         //featureExtractionTest();
         try {
-            //testFIGER();
+            testFIGER();
         }
         catch (Exception e){
             e.printStackTrace();
         }
-        //FeatureExtractor featureExtractor = new FeatureExtractor();
-        //System.out.println(featureExtractor.settleEntity("Lebron James", "athlete", new ArrayList<>(), new ArrayList<>()));
+        FeatureExtractor featureExtractor = new FeatureExtractor();
+        System.out.println(featureExtractor.settleEntity("mountain range", "henry mountains", new ArrayList<>(), new ArrayList<>()));
         //System.out.println(featureExtractor.typer("Lebron James"));
         //WikiHandler.exportToMapDB();
         try {
-            generateIntermediateFile("data/jupiter/DataII/test", "data/jupiter/DataII/test.errors", 0);
+            generateIntermediateFile("data/jupiter/DataI/test", "data/jupiter/DataI/test.1222.errors", 0);
         }
         catch (Exception e){
             e.printStackTrace();

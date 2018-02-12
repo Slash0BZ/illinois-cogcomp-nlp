@@ -75,7 +75,7 @@ public class FeatureExtractor {
         //_idfManager = new IdfManager();
         _stopWord = new StopWord(true);
         _nameConverter = new DefaultNameConverter();
-        _preprocessed = preprocessTypes();
+        //_preprocessed = preprocessTypes();
         try {
             _wordSim = new WordSim(new SimConfigurator().getConfig(new ResourceManager("taxonomic-relations/src/main/config/configurations.properties")), "paragram");
             _LLMSim = new LLMStringSim("taxonomic-relations/src/main/config/configurations.properties");
@@ -85,8 +85,8 @@ public class FeatureExtractor {
             e.printStackTrace();
         }
         skipWordList = new ArrayList<>(Arrays.asList(skipWords));
-        _db = DBMaker.fileDB("data/FIGER/category.db").fileMmapEnableIfSupported().closeOnJvmShutdown().make();
-        _categoryParents = _db.hashMap("category", Serializer.STRING, Serializer.STRING).createOrOpen();
+        //_db = DBMaker.fileDB("data/FIGER/category.db").fileMmapEnableIfSupported().closeOnJvmShutdown().make();
+        //_categoryParents = _db.hashMap("category", Serializer.STRING, Serializer.STRING).createOrOpen();
     }
 
     public void extractInstance(Instance instance){
@@ -221,8 +221,8 @@ public class FeatureExtractor {
         }
         for (String c : inputCats){
             arrCats.add(c);
-            //List<String> newExtracts = WikiHandler.getParentCategory(c, _conn);
-            List<String> newExtracts = WikiHandler.getParentCategoryViaMapDB(c, _categoryParents);
+            List<String> newExtracts = WikiHandler.getParentCategory(c, _conn);
+            //List<String> newExtracts = WikiHandler.getParentCategoryViaMapDB(c, _categoryParents);
             if (newExtracts.size() == 1){
                 arrCats.addAll(extract(newExtracts, level, counter + 1));
             }
@@ -527,7 +527,10 @@ public class FeatureExtractor {
                 }
             }
         }
-        if ((double)hit / (double)(targetTokens.length) >= 0.5){
+        if ((double)hit / (double)(targetTokens.length) >= 0.4){
+            return true;
+        }
+        if (target.contains(test) || test.contains(target)){
             return true;
         }
         return false;
@@ -580,15 +583,14 @@ public class FeatureExtractor {
         if (titlesA.size() == 0) {
             titlesA = titlesARaw.subList(0, Math.min(3, titlesARaw.size()));
         }
-        titlesA = titlesA.subList(0, Math.min(3, titlesA.size()));
+        titlesA = titlesA.subList(0, Math.min(10, titlesA.size()));
         if (titlesB.size() == 0) {
-            System.out.println("Added by insufficient candidates");
             titlesB = titlesBRaw.subList(0, Math.min(3, titlesBRaw.size()));
         }
-        titlesB = titlesB.subList(0, Math.min(3, titlesB.size()));
+        titlesB = titlesB.subList(0, Math.min(10, titlesB.size()));
+
 
         List<String> combinedChoices = titlesABRaw.subList(0, Math.min(3, titlesABRaw.size()));
-
 
         String titleA = null;
         String titleB = null;
@@ -671,6 +673,20 @@ public class FeatureExtractor {
 
         return classifyTitles(titleA, titleB, termA, termB);
 
+        /*
+        Map<String, String> exp = new HashMap<>();
+        for (String titleACandidate : titlesA){
+            for (String titleBCandidate : titlesB){
+                exp.put(titleACandidate + " : " + titleBCandidate, classifyTitles(titleACandidate, titleBCandidate, termA, termB));
+            }
+        }
+        for (String key : exp.keySet()){
+            if (!exp.get(key).equals("0")) {
+                return exp.get(key);
+            }
+        }
+        return "0";
+        */
     }
 
     public String classifyTitles(String titleA, String titleB, String termA, String termB){
@@ -680,12 +696,12 @@ public class FeatureExtractor {
         List<String> catesA = WikiHandler.getInfoFromTitle(titleA).categories;
         List<String> catesB = WikiHandler.getInfoFromTitle(titleB).categories;
         if (catesA.size() == 1){
-            //catesA.addAll(WikiHandler.getParentCategory(catesA.get(0), _conn));
-            catesA.addAll(WikiHandler.getParentCategoryViaMapDB(catesA.get(0), _categoryParents));
+            catesA.addAll(WikiHandler.getParentCategory(catesA.get(0), _conn));
+            //catesA.addAll(WikiHandler.getParentCategoryViaMapDB(catesA.get(0), _categoryParents));
         }
         if (catesB.size() == 1){
-            //catesB.addAll(WikiHandler.getParentCategory(catesB.get(0), _conn));
-            catesB.addAll(WikiHandler.getParentCategoryViaMapDB(catesB.get(0), _categoryParents));
+            catesB.addAll(WikiHandler.getParentCategory(catesB.get(0), _conn));
+            //catesB.addAll(WikiHandler.getParentCategoryViaMapDB(catesB.get(0), _categoryParents));
         }
 
         List<String> catesAFull = extract(catesA, 0, 0);
@@ -759,14 +775,14 @@ public class FeatureExtractor {
         List<String> cateALv2 = new ArrayList<>();
         List<String> cateBLv2 = new ArrayList<>();
         for (String c : catesA){
-            //cateALv2.addAll(WikiHandler.getParentCategory(c, _conn));
-            cateALv2.addAll(WikiHandler.getParentCategoryViaMapDB(c, _categoryParents));
+            cateALv2.addAll(WikiHandler.getParentCategory(c, _conn));
+            //cateALv2.addAll(WikiHandler.getParentCategoryViaMapDB(c, _categoryParents));
         }
         cateALv2.addAll(catesA);
 
         for (String c : catesB){
-            //cateBLv2.addAll(WikiHandler.getParentCategory(c, _conn));
-            cateBLv2.addAll(WikiHandler.getParentCategoryViaMapDB(c, _categoryParents));
+            cateBLv2.addAll(WikiHandler.getParentCategory(c, _conn));
+            //cateBLv2.addAll(WikiHandler.getParentCategoryViaMapDB(c, _categoryParents));
         }
         cateBLv2.addAll(catesB);
 
