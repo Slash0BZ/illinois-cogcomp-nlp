@@ -7,15 +7,20 @@
  */
 package edu.illinois.cs.cogcomp.pos;
 
+import edu.illinois.cs.cogcomp.core.utilities.configuration.ResourceManager;
 import edu.illinois.cs.cogcomp.lbjava.nlp.seg.POSBracketToToken;
 import edu.illinois.cs.cogcomp.lbjava.parse.Parser;
-import edu.illinois.cs.cogcomp.pos.lbjava.*;
-import edu.illinois.cs.cogcomp.core.utilities.configuration.ResourceManager;
+import edu.illinois.cs.cogcomp.ner.ExpressiveFeatures.BrownClusters;
+import edu.illinois.cs.cogcomp.pos.lbjava.BaselineTarget;
+import edu.illinois.cs.cogcomp.pos.lbjava.MikheevTable;
+import edu.illinois.cs.cogcomp.pos.lbjava.POSTaggerKnown;
+import edu.illinois.cs.cogcomp.pos.lbjava.POSTaggerUnknown;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Vector;
 
 /**
  * Simple class to build and train models from existing training data, as opposed to using the
@@ -136,13 +141,26 @@ public class POSTrain {
     }
 
     public static void main(String[] args) throws Exception{
+        Vector<String> bcs = new Vector<>();
+        bcs.add("brown-clusters" + File.separator + "brown-english-wikitext.case-intact.txt-c1000-freq10-v3.txt");
+        bcs.add("brown-clusters" + File.separator + "brownBllipClusters");
+        bcs.add("brown-clusters" + File.separator + "brown-rcv1.clean.tokenized-CoNLL03.txt-c1000-freq1.txt");
+        Vector<Integer> bcst = new Vector<>();
+        bcst.add(5);
+        bcst.add(5);
+        bcst.add(5);
+        Vector<Boolean> bcsl = new Vector<>();
+        bcsl.add(false);
+        bcsl.add(false);
+        bcsl.add(false);
+        BrownClusters.init(bcs, bcst, bcsl, false);
         POSTrain trainer;
         if(args.length > 0) {
             System.out.printf("Use config file : %s\n", args[0]);
             trainer = new POSTrain(50, args[0]);
         }
         else
-            trainer = new POSTrain(50);
+            trainer = new POSTrain(50, "pos/config/default.properties");
         trainer.trainModels();
         trainer.writeModelsToDisk();
     }

@@ -29,6 +29,12 @@ public class POSTaggerUnknown$$1 extends Classifier {
     private static final L1bL1aU __L1bL1aU = new L1bL1aU();
     private static final L1aL2aU __L1aL2aU = new L1aL2aU();
     private static final suffixFeatures __suffixFeatures = new suffixFeatures();
+    private static final WordTypeInformation __wordTypeInformation = new WordTypeInformation();
+    private static final BrownClusterPaths __bcc = new BrownClusterPaths();
+    private static final BrownClusterPathsConj __bccj = new BrownClusterPathsConj();
+
+
+
 
     public POSTaggerUnknown$$1() {
         containingPackage = "edu.illinois.cs.cogcomp.pos.lbjava";
@@ -57,6 +63,10 @@ public class POSTaggerUnknown$$1 extends Classifier {
         __result.addFeature(__L1bL1aU.featureValue(__example));
         __result.addFeature(__L1aL2aU.featureValue(__example));
         __result.addFeatures(__suffixFeatures.classify(__example));
+        __result.addFeatures(__wordTypeInformation.classify(__example));
+        __result.addFeatures(__bcc.classify(__example));
+        __result.addFeatures(__bccj.classify(__example));
+
         return __result;
     }
 
@@ -80,6 +90,10 @@ public class POSTaggerUnknown$$1 extends Classifier {
         result.add(__L1bL1aU);
         result.add(__L1aL2aU);
         result.add(__suffixFeatures);
+        result.add(__wordTypeInformation);
+        result.add(__bcc);
+        result.add(__bccj);
+
         return result;
     }
 }

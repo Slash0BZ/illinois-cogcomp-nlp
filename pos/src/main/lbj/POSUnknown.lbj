@@ -17,7 +17,7 @@ import edu.illinois.cs.cogcomp.lbjava.nlp.seg.Token;
  **/
 discrete MikheevTable(Token w) <-
 learn POSLabel
-  using wordForm
+  using WordForm
   //from new POSBracketToToken(Constants.trainingAndDevData)
   with new MikheevLearner()
   preExtract false
@@ -32,7 +32,7 @@ end
 discrete labelOrBaselineU(Token w) cached <-
 {
   if (POSTaggerUnknown.isTraining) return POSLabel(w);
-  return baselineTarget(w);
+  return BaselineTarget(w);
 }
 
 /**
@@ -133,9 +133,9 @@ discrete% suffixFeatures(Token w) <-
   int length = w.form.length();
   boolean unknown =
     POSTaggerUnknown.isTraining
-      && new baselineTarget().observedCount(w.form)
+      && new BaselineTarget().observedCount(w.form)
          <= POSLabeledUnknownWordParser.threshold
-    || !POSTaggerUnknown.isTraining && baselineTarget(w).equals("UNKNOWN");
+    || !POSTaggerUnknown.isTraining && BaselineTarget(w).equals("UNKNOWN");
 
   if (unknown && length > 3 && Character.isLetter(w.form.charAt(length - 1)))
   {
@@ -167,7 +167,7 @@ discrete% suffixFeatures(Token w) <-
  **/
 discrete POSTaggerUnknown(Token w) cachedin w.partOfSpeech <-
 learn POSLabel
-  using wordForm, baselineTarget, labelTwoBeforeU, labelOneBeforeU,
+  using WordForm, BaselineTarget, labelTwoBeforeU, labelOneBeforeU,
         labelOneAfterU, labelTwoAfterU, L2bL1bU, L1bL1aU, L1aL2aU,
         suffixFeatures
   //from new POSLabeledUnknownWordParser(Constants.trainingAndDevData) 50 rounds

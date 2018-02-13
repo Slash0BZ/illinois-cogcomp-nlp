@@ -32,6 +32,11 @@
             <version>3.0.13</version>
         </dependency>
         <dependency>
+            <groupId>edu.illinois.cs.cogcomp</groupId>
+            <artifactId>illinois-ner</artifactId>
+            <version>4.0.1</version>
+        </dependency>
+        <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
             <version>1.7.12</version>
@@ -39,56 +44,58 @@
         </dependency>
     </dependencies>
 
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>CogcompSoftware</id>
+            <name>CogcompSoftware</name>
+            <url>http://cogcomp.org/m2repo/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
+
     <build>
         <plugins>
-            <!--<plugin>-->
-                <!--<groupId>edu.illinois.cs.cogcomp</groupId>-->
-                <!--<artifactId>lbjava-maven-plugin</artifactId>-->
-                <!--<version>1.2.13</version>-->
-                <!--<configuration>-->
-                    <!--<lbjavaInputFileList>-->
-                        <!--<param>${project.basedir}/src/main/lbj/POSKnown.lbj</param>-->
-                        <!--<param>${project.basedir}/src/main/lbj/POSUnknown.lbj</param>-->
-                        <!--<param>${project.basedir}/src/main/lbj/POS.lbj</param>-->
-                    <!--</lbjavaInputFileList>-->
-                    <!--<gspFlag>${project.basedir}/src/main/java</gspFlag>-->
-                    <!--<dFlag>${project.basedir}/target/classes</dFlag>-->
-                    <!--<sourcepathFlag>${project.basedir}/src/main/java</sourcepathFlag>-->
-                <!--</configuration>-->
-                <!--<executions>-->
-                    <!--<execution>-->
-                        <!--<id>compiling</id>-->
-                        <!--<phase>generate-sources</phase>-->
-                        <!--<goals>-->
-                            <!--<goal>clean</goal>-->
-                            <!--<goal>compile</goal>-->
-                        <!--</goals>-->
-                    <!--</execution>-->
-                    <!--<execution>-->
-                        <!--<id>cleaning</id>-->
-                        <!--<phase>pre-clean</phase>-->
-                        <!--<goals>-->
-                            <!--<goal>clean</goal>-->
-                        <!--</goals>-->
-                    <!--</execution>-->
-                <!--</executions>-->
-            <!--</plugin>-->
+            <plugin>
+                <groupId>edu.illinois.cs.cogcomp</groupId>
+                <artifactId>lbjava-maven-plugin</artifactId>
+                <version>1.3.0</version>
+                <configuration>
+                    <lbjavaInputFileList>
+<!--                        <param>${project.basedir}/src/main/lbj/POSKnown.lbj</param>
+                        <param>${project.basedir}/src/main/lbj/POSUnknown.lbj</param>
+                        <param>${project.basedir}/src/main/lbj/POS.lbj</param>-->
+                        <param>${project.basedir}/src/main/lbj/POSAdditional.lbj</param>
+                    </lbjavaInputFileList>
+                    <gspFlag>${project.basedir}/src/main/java</gspFlag>
+                    <dFlag>${project.basedir}/target/classes</dFlag>
+                    <sourcepathFlag>${project.basedir}/src/main/java</sourcepathFlag>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>compiling</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>clean</goal>
+                            <goal>compile</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>cleaning</id>
+                        <phase>pre-clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 
-    <!-- needed for lbj plugin -->
-    <!--<pluginRepositories>-->
-        <!--<pluginRepository>-->
-            <!--<id>CogcompSoftware</id>-->
-            <!--<name>CogcompSoftware</name>-->
-            <!--<url>http://cogcomp.org/m2repo/</url>-->
-            <!--<releases>-->
-                <!--<enabled>true</enabled>-->
-            <!--</releases>-->
-            <!--<snapshots>-->
-                <!--<enabled>true</enabled>-->
-            <!--</snapshots>-->
-        <!--</pluginRepository>-->
-    <!--</pluginRepositories>-->
 
 </project>

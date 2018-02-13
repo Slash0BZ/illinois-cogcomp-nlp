@@ -15,7 +15,7 @@ import edu.illinois.cs.cogcomp.lbjava.nlp.seg.Token;
  **/
 discrete POSTagger(Token w) <-
 {
-  if (baselineTarget.getInstance().observed(wordForm(w)))
+  if (baselineTarget.getInstance().observed(WordForm(w)))
     return POSTaggerKnown(w);
   return POSTaggerUnknown(w);
 }

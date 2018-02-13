@@ -8,8 +8,8 @@
 package edu.illinois.cs.cogcomp.pos.lbjava;
 
 import edu.illinois.cs.cogcomp.core.utilities.configuration.ResourceManager;
-import edu.illinois.cs.cogcomp.lbjava.classify.*;
-import edu.illinois.cs.cogcomp.lbjava.nlp.seg.Token;
+import edu.illinois.cs.cogcomp.lbjava.classify.Classifier;
+import edu.illinois.cs.cogcomp.lbjava.classify.FeatureVector;
 import edu.illinois.cs.cogcomp.pos.POSConfigurator;
 
 import java.util.LinkedList;
@@ -28,6 +28,14 @@ public class POSTaggerKnown$$1 extends Classifier {
     private static final L2bL1b __L2bL1b = new L2bL1b();
     private static final L1bL1a __L1bL1a = new L1bL1a();
     private static final L1aL2a __L1aL2a = new L1aL2a();
+    private static final f1 __f1 = new f1();
+    private static final f2 __f2 = new f2();
+    private static final f3 __f3 = new f3();
+    private static final f4 __f4 = new f4();
+    private static final f5 __f5 = new f5();
+    private static final WordTypeInformation __wordTypeInformation = new WordTypeInformation();
+    private static final BrownClusterPaths __bcc = new BrownClusterPaths();
+    private static final BrownClusterPathsConj __bccj = new BrownClusterPathsConj();
 
     public POSTaggerKnown$$1() {
         containingPackage = "edu.illinois.cs.cogcomp.pos.lbjava";
@@ -54,6 +62,14 @@ public class POSTaggerKnown$$1 extends Classifier {
         __result.addFeature(__L2bL1b.featureValue(__example));
         __result.addFeature(__L1bL1a.featureValue(__example));
         __result.addFeature(__L1aL2a.featureValue(__example));
+/*        __result.addFeatures(__f1.classify(__example));
+        __result.addFeatures(__f2.classify(__example));
+        __result.addFeatures(__f3.classify(__example));
+        __result.addFeatures(__f4.classify(__example));
+        __result.addFeatures(__f5.classify(__example));*/
+        __result.addFeatures(__wordTypeInformation.classify(__example));
+        __result.addFeatures(__bcc.classify(__example));
+        __result.addFeatures(__bccj.classify(__example));
         return __result;
     }
 
@@ -76,6 +92,15 @@ public class POSTaggerKnown$$1 extends Classifier {
         result.add(__L2bL1b);
         result.add(__L1bL1a);
         result.add(__L1aL2a);
+/*        result.add(__f1);
+        result.add(__f2);
+        result.add(__f3);
+        result.add(__f4);
+        result.add(__f5);*/
+        result.add(__wordTypeInformation);
+        result.add(__bcc);
+        result.add(__bccj);
+
         return result;
     }
 }

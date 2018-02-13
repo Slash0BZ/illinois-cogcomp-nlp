@@ -15,7 +15,7 @@ import edu.illinois.cs.cogcomp.lbjava.nlp.seg.Token;
   *
   * @author Nick Rizzolo
  **/
-discrete wordForm(Token w) <-
+discrete WordForm(Token w) <-
 {
   if (w.form.length() == 1)
   {
@@ -40,9 +40,9 @@ discrete POSLabel(Token w) <- { return w.label; }
   *
   * @author Nick Rizzolo
  **/
-discrete baselineTarget(Token w) <-
+discrete BaselineTarget(Token w) <-
 learn POSLabel
-  using wordForm
+  using WordForm
   //from new POSBracketToToken(Constants.trainingAndDevData)
   with new POSBaselineLearner()
   preExtract false
@@ -57,7 +57,7 @@ end
 discrete labelOrBaseline(Token w) cached <-
 {
   if (POSTaggerKnown.isTraining) return POSLabel(w);
-  return baselineTarget(w);
+  return BaselineTarget(w);
 }
 
 /**
@@ -146,6 +146,22 @@ discrete L1bL1a(Token w) <- labelOneBefore && labelOneAfter
  **/
 discrete L1aL2a(Token w) <- labelOneAfter && labelTwoAfter
 
+discrete% f1 (Token w) <-
+labelOrBaseline && labelOneBefore && labelTwoBefore
+
+discrete% f2 (Token w) <-
+labelOrBaseline && labelOneAfter && labelOneBefore
+
+discrete% f3 (Token w) <-
+labelOrBaseline && labelTwoBefore && labelOneBefore && labelOneAfter
+
+discrete% f4 (Token w) <-
+labelOneAfter && labelOrBaseline
+
+discrete% f5 (Token w) <-
+labelTwoAfter && labelOrBaseline && labelOneAfter
+
+
 /**
   * Predicting the part of speech of the given word, this classifier is
   * intended to be applied only on words whose forms were observed during
@@ -162,8 +178,9 @@ discrete L1aL2a(Token w) <- labelOneAfter && labelTwoAfter
  **/
 discrete POSTaggerKnown(Token w) cachedin w.partOfSpeech <-
 learn POSLabel
-  using wordForm, baselineTarget, labelTwoBefore, labelOneBefore,
-        labelOneAfter, labelTwoAfter, L2bL1b, L1bL1a, L1aL2a
+  using WordForm, BaselineTarget, labelTwoBefore, labelOneBefore,
+        labelOneAfter, labelTwoAfter, L2bL1b, L1bL1a, L1aL2a,
+        f1,f2,f3,f4,f5
   //from new POSBracketToToken(Constants.trainingAndDevData) 50 rounds
   with SparseNetworkLearner
   {
@@ -174,7 +191,7 @@ learn POSLabel
     baseLTU = new SparseAveragedPerceptron(p);
   }
 
-  evaluate valueOf(w, baselineTarget.allowableTags(wordForm(w)))
+  evaluate valueOf(w, BaselineTarget.allowableTags(WordForm(w)))
   progressOutput 2000000
 end
 

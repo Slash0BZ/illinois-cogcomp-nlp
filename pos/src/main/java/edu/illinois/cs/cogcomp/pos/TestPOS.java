@@ -10,7 +10,12 @@ package edu.illinois.cs.cogcomp.pos;
 import edu.illinois.cs.cogcomp.core.utilities.configuration.ResourceManager;
 import edu.illinois.cs.cogcomp.lbjava.classify.TestDiscrete;
 import edu.illinois.cs.cogcomp.lbjava.nlp.seg.POSBracketToToken;
-import edu.illinois.cs.cogcomp.pos.lbjava.*;
+import edu.illinois.cs.cogcomp.ner.ExpressiveFeatures.BrownClusters;
+import edu.illinois.cs.cogcomp.pos.lbjava.POSLabel;
+import edu.illinois.cs.cogcomp.pos.lbjava.POSTagger;
+
+import java.io.File;
+import java.util.Vector;
 
 /**
  * This program tests {@link POSTagger} on labeled data and reports its performance. All output is
@@ -55,6 +60,19 @@ public class TestPOS {
         // }
 
         // String testingFile = args[0];
+        Vector<String> bcs = new Vector<>();
+        bcs.add("brown-clusters" + File.separator + "brown-english-wikitext.case-intact.txt-c1000-freq10-v3.txt");
+        bcs.add("brown-clusters" + File.separator + "brownBllipClusters");
+        bcs.add("brown-clusters" + File.separator + "brown-rcv1.clean.tokenized-CoNLL03.txt-c1000-freq1.txt");
+        Vector<Integer> bcst = new Vector<>();
+        bcst.add(5);
+        bcst.add(5);
+        bcst.add(5);
+        Vector<Boolean> bcsl = new Vector<>();
+        bcsl.add(false);
+        bcsl.add(false);
+        bcsl.add(false);
+        BrownClusters.init(bcs, bcst, bcsl, false);
         ResourceManager rm = new POSConfigurator().getDefaultConfig();
 
         String testingFile = rm.getString("testData");
