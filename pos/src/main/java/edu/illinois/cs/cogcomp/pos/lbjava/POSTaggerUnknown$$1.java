@@ -63,9 +63,9 @@ public class POSTaggerUnknown$$1 extends Classifier {
         __result.addFeature(__L1bL1aU.featureValue(__example));
         __result.addFeature(__L1aL2aU.featureValue(__example));
         __result.addFeatures(__suffixFeatures.classify(__example));
-        __result.addFeatures(__wordTypeInformation.classify(__example));
-        __result.addFeatures(__bcc.classify(__example));
-        __result.addFeatures(__bccj.classify(__example));
+/*        __result.addFeatures(__wordTypeInformation.classify(__example));*/
+/*        __result.addFeatures(__bcc.classify(__example));
+        __result.addFeatures(__bccj.classify(__example));*/
 
         return __result;
     }
@@ -90,9 +90,9 @@ public class POSTaggerUnknown$$1 extends Classifier {
         result.add(__L1bL1aU);
         result.add(__L1aL2aU);
         result.add(__suffixFeatures);
-        result.add(__wordTypeInformation);
-        result.add(__bcc);
-        result.add(__bccj);
+/*        result.add(__wordTypeInformation);*/
+/*        result.add(__bcc);
+        result.add(__bccj);*/
 
         return result;
     }

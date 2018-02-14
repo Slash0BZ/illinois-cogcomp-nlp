@@ -62,14 +62,9 @@ public class POSTaggerKnown$$1 extends Classifier {
         __result.addFeature(__L2bL1b.featureValue(__example));
         __result.addFeature(__L1bL1a.featureValue(__example));
         __result.addFeature(__L1aL2a.featureValue(__example));
-/*        __result.addFeatures(__f1.classify(__example));
-        __result.addFeatures(__f2.classify(__example));
-        __result.addFeatures(__f3.classify(__example));
-        __result.addFeatures(__f4.classify(__example));
-        __result.addFeatures(__f5.classify(__example));*/
-        __result.addFeatures(__wordTypeInformation.classify(__example));
-        __result.addFeatures(__bcc.classify(__example));
-        __result.addFeatures(__bccj.classify(__example));
+/*       __result.addFeatures(__wordTypeInformation.classify(__example));*/
+/*        __result.addFeatures(__bcc.classify(__example));
+        __result.addFeatures(__bccj.classify(__example));*/
         return __result;
     }
 
@@ -92,14 +87,9 @@ public class POSTaggerKnown$$1 extends Classifier {
         result.add(__L2bL1b);
         result.add(__L1bL1a);
         result.add(__L1aL2a);
-/*        result.add(__f1);
-        result.add(__f2);
-        result.add(__f3);
-        result.add(__f4);
-        result.add(__f5);*/
-        result.add(__wordTypeInformation);
-        result.add(__bcc);
-        result.add(__bccj);
+/*        result.add(__wordTypeInformation);*/
+/*        result.add(__bcc);
+        result.add(__bccj);*/
 
         return result;
     }
