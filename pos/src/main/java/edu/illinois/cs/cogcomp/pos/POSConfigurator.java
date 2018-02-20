@@ -11,8 +11,6 @@ import edu.illinois.cs.cogcomp.core.utilities.configuration.Configurator;
 import edu.illinois.cs.cogcomp.core.utilities.configuration.Property;
 import edu.illinois.cs.cogcomp.core.utilities.configuration.ResourceManager;
 
-import java.io.IOException;
-
 /**
  * Constant values used by the LBJ source file.
  *
@@ -21,7 +19,7 @@ import java.io.IOException;
 public class POSConfigurator extends Configurator {
     /** A configurable prefix. */
     public static final Property CORPUS_PREFIX = new Property("corpusPrefix",
-            "/shared/corpora/corporaWeb/written/eng/POS/");
+            "data/POS/");
     /** The file containing the training set. */
     public static final Property TRAINING_DATA = new Property("trainingData", CORPUS_PREFIX.value
             + "00-18.br");
@@ -41,7 +39,7 @@ public class POSConfigurator extends Configurator {
     public static final Property UNKNOWN_NAME = new Property("unknownName", "POSTaggerUnknown");
 
     public static final Property MODEL_PATH = new Property("modelPath",
-            "models/edu/illinois/cs/cogcomp/pos/lbjava/");
+            "models/POS/");
     public static final Property BASELINE_MODEL_PATH = new Property("baselineModelPath",
             MODEL_PATH.value + BASELINE_NAME.value + ".lc");
     public static final Property BASELINE_LEX_PATH = new Property("baselineLexPath",

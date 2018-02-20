@@ -1,0 +1,31 @@
+package edu.illinois.cs.cogcomp.pos.lbjava;
+
+import edu.illinois.cs.cogcomp.pos.*;
+import edu.illinois.cs.cogcomp.lbjava.nlp.*;
+import edu.illinois.cs.cogcomp.lbjava.nlp.seg.POSBracketToToken;
+import edu.illinois.cs.cogcomp.lbjava.nlp.seg.Token;
+import edu.illinois.cs.cogcomp.ner.ExpressiveFeatures.BrownClusters;
+
+
+discrete{false, true}% WordTypeInformation(Token word) <-
+{
+	  int i;
+	  Token w = word, last = word;
+	  for (i = 0; i <= 1 && last != null; ++i) last = (Token) last.next;
+	  for (i = 0; i > -1 && w.previous != null; --i) w = (Token) w.previous;
+
+	  for (; w != last; w = (Token) w.next, ++i)
+	  {
+	    boolean allCapitalized = true, allDigits = true, allNonLetters = true;
+
+	    for (int j = 0; j < w.form.length(); ++j) {
+	    	char c = w.form.charAt(j);
+	      	allCapitalized &= Character.isUpperCase(c);
+	      	allDigits &= (Character.isDigit(c)||c=='.'||c==',');
+	      	allNonLetters &= !Character.isLetter(c);
+	    }
+	    sense "c" + i : allCapitalized;
+	    sense "d" + i : allDigits;
+	    sense "p" + i : allNonLetters;
+  	  }
+}

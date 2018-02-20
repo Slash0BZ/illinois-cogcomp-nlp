@@ -8,8 +8,8 @@
 package edu.illinois.cs.cogcomp.pos.lbjava;
 
 import edu.illinois.cs.cogcomp.core.utilities.configuration.ResourceManager;
-import edu.illinois.cs.cogcomp.lbjava.classify.*;
-import edu.illinois.cs.cogcomp.lbjava.nlp.seg.Token;
+import edu.illinois.cs.cogcomp.lbjava.classify.Classifier;
+import edu.illinois.cs.cogcomp.lbjava.classify.FeatureVector;
 import edu.illinois.cs.cogcomp.pos.POSConfigurator;
 
 import java.util.LinkedList;
@@ -28,6 +28,8 @@ public class POSTaggerKnown$$1 extends Classifier {
     private static final L2bL1b __L2bL1b = new L2bL1b();
     private static final L1bL1a __L1bL1a = new L1bL1a();
     private static final L1aL2a __L1aL2a = new L1aL2a();
+    private static final WordTypeInformation __wordTypeInformation = new WordTypeInformation();
+
 
     public POSTaggerKnown$$1() {
         containingPackage = "edu.illinois.cs.cogcomp.pos.lbjava";
@@ -54,6 +56,8 @@ public class POSTaggerKnown$$1 extends Classifier {
         __result.addFeature(__L2bL1b.featureValue(__example));
         __result.addFeature(__L1bL1a.featureValue(__example));
         __result.addFeature(__L1aL2a.featureValue(__example));
+        __result.addFeatures(__wordTypeInformation.classify(__example));
+
         return __result;
     }
 
@@ -76,6 +80,7 @@ public class POSTaggerKnown$$1 extends Classifier {
         result.add(__L2bL1b);
         result.add(__L1bL1a);
         result.add(__L1aL2a);
+        result.add(__wordTypeInformation);
         return result;
     }
 }
