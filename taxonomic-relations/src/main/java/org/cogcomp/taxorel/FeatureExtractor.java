@@ -14,7 +14,9 @@ import edu.illinois.cs.cogcomp.core.datastructures.Pair;
 import edu.illinois.cs.cogcomp.core.datastructures.ViewNames;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.Constituent;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.TextAnnotation;
+import edu.illinois.cs.cogcomp.core.resources.ResourceConfigurator;
 import edu.illinois.cs.cogcomp.core.utilities.configuration.ResourceManager;
+import edu.illinois.cs.cogcomp.ner.ExpressiveFeatures.BrownClusters;
 import edu.illinois.cs.cogcomp.nlp.tokenizer.StatefulTokenizer;
 import edu.illinois.cs.cogcomp.nlp.utility.TokenizerTextAnnotationBuilder;
 import edu.illinois.cs.cogcomp.pos.POSAnnotator;
@@ -23,13 +25,13 @@ import edu.illinois.cs.cogcomp.sim.Metric;
 import edu.illinois.cs.cogcomp.sim.MetricResponse;
 import edu.illinois.cs.cogcomp.sim.WordSim;
 import javatools.parsers.NounGroup;
+import org.cogcomp.Datastore;
 import org.jibx.schema.codegen.extend.DefaultNameConverter;
 import org.jibx.schema.codegen.extend.NameConverter;
 import org.mapdb.DB;
-import org.mapdb.DBMaker;
 import org.mapdb.HTreeMap;
-import org.mapdb.Serializer;
 
+import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.text.DecimalFormat;
@@ -46,6 +48,7 @@ public class FeatureExtractor {
     public Metric _LLMSim = null;
     public NameConverter _nameConverter = null;
     public Connection _conn = null;
+    public BrownClusters _brownCluster = null;
     Map<String, Pair<String, List<String>>> _preprocessed = null;
     DB _db = null;
     HTreeMap<String, String> _categoryParents = null;
@@ -87,6 +90,27 @@ public class FeatureExtractor {
         skipWordList = new ArrayList<>(Arrays.asList(skipWords));
         //_db = DBMaker.fileDB("data/FIGER/category.db").fileMmapEnableIfSupported().closeOnJvmShutdown().make();
         //_categoryParents = _db.hashMap("category", Serializer.STRING, Serializer.STRING).createOrOpen();
+
+        try {
+            Datastore ds = new Datastore(new ResourceConfigurator().getDefaultConfig());
+            Vector<String> bcs = new Vector<>();
+            bcs.add("brown-clusters" + File.separator + "brown-english-wikitext.case-intact.txt-c1000-freq10-v3.txt");
+            bcs.add("brown-clusters" + File.separator + "brownBllipClusters");
+            bcs.add("brown-clusters" + File.separator + "brown-rcv1.clean.tokenized-CoNLL03.txt-c1000-freq1.txt");
+            Vector<Integer> bcst = new Vector<>();
+            bcst.add(5);
+            bcst.add(5);
+            bcst.add(5);
+            Vector<Boolean> bcsl = new Vector<>();
+            bcsl.add(false);
+            bcsl.add(false);
+            bcsl.add(false);
+            BrownClusters.init(bcs, bcst, bcsl, false);
+            _brownCluster = BrownClusters.get();
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     public void extractInstance(Instance instance){
@@ -228,6 +252,30 @@ public class FeatureExtractor {
             }
             else {
                 arrCats.addAll(extract(newExtracts, level + 1, counter + 1));
+            }
+        }
+        return arrCats;
+    }
+
+    public List<Pair<String, Integer>> extractWithLevel(List<Pair<String, Integer>> inputCats, int level, int counter){
+        ArrayList<Pair<String, Integer>> arrCats = new ArrayList<>();
+        if (level > K){
+            return arrCats;
+        }
+        if (counter > 10){
+            return arrCats;
+        }
+        for (Pair p : inputCats){
+            arrCats.add(p);
+            List<Pair<String, Integer>> newExtracts = new ArrayList<>();
+            for (String ns : WikiHandler.getParentCategory((String)p.getFirst(), _conn)){
+                newExtracts.add(new Pair<>(ns, level));
+            }
+            if (newExtracts.size() == 1){
+                arrCats.addAll(extractWithLevel(newExtracts, level, counter + 1));
+            }
+            else {
+                arrCats.addAll(extractWithLevel(newExtracts, level + 1, counter + 1));
             }
         }
         return arrCats;
@@ -1197,6 +1245,77 @@ public class FeatureExtractor {
         return ret;
     }
 
+    public String typer(List<Pair<String, Integer>> categories){
+        List<String> catesA = new ArrayList<>();
+        for (Pair<String, Integer> p : categories){
+            if (p.getSecond() == 0){
+                catesA.add(p.getFirst());
+            }
+        }
+        List<List<String>> outputs = new ArrayList<>();
+
+        for (int i = 0; i < typeIdentifier.length; i++){
+            outputs.add(new ArrayList<String>());
+        }
+        int[] count = new int[outputs.size()];
+        for (int i = 0; i < count.length; i++){
+            count[i] = 0;
+        }
+        Map<String, boolean[]> results = new HashMap<>();
+        int idxCount = 0;
+        Map<String, String> printMap = new HashMap<>();
+        printMap.put("People", "0-100000");
+        printMap.put("Organizations", "1-010000");
+        printMap.put("Places", "2-001000");
+        printMap.put("Events", "3-000100");
+        printMap.put("Manufactured goods", "4-000010");
+        printMap.put("Culture", "5-000001");
+        List<Pair<Integer, Integer>> edges = new ArrayList<>();
+        for (String s : catesA){
+            boolean[] result = isCoarseTypeHelperConcur(s, 0, outputs, printMap, edges);
+            results.put(s, result);
+            for (int i = 0; i < result.length; i++){
+                if (result[i]){
+                    count[i] += 1;
+                }
+            }
+            idxCount ++;
+        }
+
+        int maxCountIdx = 0;
+        int maxCount = count[0];
+        for (int i = 1; i < count.length; i++){
+            if (count[i] > maxCount) {
+                maxCountIdx = i;
+                maxCount = count[i];
+            }
+        }
+        if ((double)maxCount / (double)catesA.size() < 0.1){
+            return "NONE";
+        }
+        String coarse = "";
+        if (maxCountIdx == 0){
+            coarse = "Person:";
+        }
+        if (maxCountIdx == 1){
+            coarse = "Organizations:";
+        }
+        if (maxCountIdx == 2){
+            coarse = "Places:";
+        }
+        if (maxCountIdx == 3){
+            coarse = "Events:";
+        }
+        if (maxCountIdx == 4){
+            coarse = "Products:";
+        }
+        if (maxCountIdx == 5){
+            coarse = "Culture:";
+        }
+        return coarse;
+
+    }
+
 
     public boolean isCoarseTypeHelper(String cur, String target, int level, List<String> outputs){
         if (level > 8){
@@ -1393,4 +1512,126 @@ public class FeatureExtractor {
         return initialRet;
     }
 
+    public String coarseTyper(String title){
+        List<String> catesA = WikiHandler.getInfoFromTitle(title).categories;
+        if (catesA.size() == 1){
+            catesA.addAll(WikiHandler.getParentCategory(catesA.get(0), _conn));
+        }
+        //List<String> catesAFull = catesA;
+        List<String> catesAFull = extract(catesA, 0, 0);
+        List<String> detA = new ArrayList<>();
+        for (String ca : getFilteredNouns(catesAFull)){
+            double scoreTitle = Math.max(getLLMScore(ca, title), getLLMScore(title, ca));
+            if (scoreTitle < 0.8){
+                detA.add(ca);
+            }
+        }
+        List<String> PER_Cates = new ArrayList<>();
+        PER_Cates.add("Humans");
+        PER_Cates.add("People");
+        List<String> ORG_Cates = new ArrayList<>();
+        ORG_Cates.add("Organizations");
+        List<String> LOC_Cates = new ArrayList<>();
+        LOC_Cates.add("Places");
+
+        int per = getScoreForCoarseType(detA, PER_Cates);
+        int org = getScoreForCoarseType(detA, ORG_Cates);
+        int loc = getScoreForCoarseType(detA, LOC_Cates);
+
+        if (per > org && per > loc){
+            return "PER";
+        }
+        if (org > per && org > loc){
+            return "ORG";
+        }
+        if (loc > per && loc > org){
+            return  "LOC";
+        }
+        return "";
+    }
+
+    public List<Pair<String, Integer>> getCategories(String title){
+        List<Pair<String, Integer>> ret = new ArrayList<>();
+        List<String> catesA = WikiHandler.getInfoFromTitle(title).categories;
+        for (String s : catesA){
+            ret.add(new Pair<>(s, 0));
+        }
+        if (catesA.size() == 1){
+            for (String s : WikiHandler.getParentCategory(catesA.get(0), _conn)){
+                ret.add(new Pair<>(s, 0));
+            }
+        }
+        ret = extractWithLevel(ret, 1, 0);
+        return ret;
+    }
+
+    public int getScoreForCoarseType(List<String> detA, List<String> titleSet){
+        int freq = 0;
+        for (String sa : detA){
+            sa = depluralizePhrase(sa);
+            for (String tsb : titleSet){
+                tsb = depluralizePhrase(tsb);
+                if (getLLMScore(sa, tsb) > 0.6){
+                    freq += 1;
+                }
+            }
+        }
+        return freq / titleSet.size();
+    }
+
+    public int getScore(List<Pair<String, Integer>> detA, String title){
+        int freq = 0;
+        for (Pair<String, Integer> p : detA){
+            String sa = p.getFirst();
+            sa = getFilteredNoun(sa);
+            sa = depluralizePhrase(sa);
+            if (getLLMScore(sa, title) > 0.3){
+                freq += 1;
+            }
+        }
+        return freq;
+    }
+
+    public boolean onlyNN(String cat){
+        TextAnnotationBuilder tab;
+        boolean splitOnHyphens = false;
+        tab = new TokenizerTextAnnotationBuilder(new StatefulTokenizer(splitOnHyphens));
+        TextAnnotation ta = tab.createTextAnnotation("", "", cat);
+        try {
+            ta.addView(_posAnnotator);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        boolean ret = true;
+        for (Constituent c : ta.getView(ViewNames.POS)) {
+            if (!c.getLabel().startsWith("NN")) {
+                ret = false;
+                break;
+            }
+        }
+        return ret;
+    }
+    public Set<String> getNNOnlyCategories(String title){
+        List<String> catesA = WikiHandler.getInfoFromTitle(title).categories;
+        Stack<Pair<String, Integer>> todoList = new Stack<>();
+        for (String s : catesA){
+            todoList.push(new Pair<>(s, 0));
+        }
+        Set<String> ret = new HashSet<>();
+        while (!todoList.empty()){
+            Pair<String, Integer> catePair = todoList.pop();
+            if (catePair.getSecond() > 5){
+                continue;
+            }
+            List<String> parents = WikiHandler.getParentCategory(catePair.getFirst(), _conn);
+            for (String s : parents) {
+                if (!onlyNN(s)) {
+                    todoList.push(new Pair<>(s, catePair.getSecond() + 1));
+                } else {
+                    ret.add(s);
+                }
+            }
+        }
+        return ret;
+    }
 }

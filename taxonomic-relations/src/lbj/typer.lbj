@@ -1,0 +1,55 @@
+package org.cogcomp.taxorel.lbjGen;
+import org.cogcomp.taxorel.*;
+import edu.illinois.cs.cogcomp.core.datastructures.Pair;
+import java.util.List;
+
+discrete% bow(WikiMention mention) <-
+{
+    List cates = mention.categories;
+    for (int i = 0; i < cates.size(); i++){
+        Pair pair = (Pair)cates.get(i);
+        String cateForm = (String)pair.getFirst();
+        String[] cateFormGroup = cateForm.split(" ");
+        for (int j = 0; j < cateFormGroup.length; j++){
+            sense (Integer)pair.getSecond() : cateFormGroup[j];
+        }
+    }
+}
+
+discrete% browncluster_bow(WikiMention mention)<-
+{
+    FeatureExtractor fe = new FeatureExtractor();
+    List cates = mention.categories;
+    for (int i = 0; i < cates.size(); i++){
+        Pair pair = (Pair)cates.get(i);
+        String cateForm = (String)pair.getFirst();
+        String[] cateFormGroup = cateForm.split(" ");
+        for (int j = 0; j < cateFormGroup.length; j++){
+            String cateWord = fe.depluralizePhrase(cateFormGroup[j]);
+            String[] cateWordBCs = fe._brownCluster.getPrefixes(cateWord);
+            for (int k = 0; k < cateWordBCs.length; k++){
+                sense (Integer)pair.getSecond() : cateWordBCs[k];
+            }
+        }
+    }
+}
+
+discrete% recursive_type(WikiMention mention) <-
+{
+    FeatureExtractor fe = new FeatureExtractor();
+    List cates = mention.categories;
+    sense fe.typer(cates);
+}
+
+discrete CoarseType(WikiMention mention) <-
+{
+    return mention._type;
+}
+
+discrete TypingClassifier(WikiMention mention) <-
+learn CoarseType
+    using bow, browncluster_bow, recursive_type
+    with SupportVectorMachine {
+
+    }
+end

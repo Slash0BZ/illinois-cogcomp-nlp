@@ -27,6 +27,123 @@ import java.util.*;
  */
 public class WikiHandler {
 
+    public static String getRedirectUrl(String title){
+        try {
+            String urlRequest = URLEncoder.encode(title, "UTF-8");
+            URL url = new URL("https://en.wikipedia.org/wiki/" + urlRequest);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.addRequestProperty("Accept-Language", "en-US,en;q=0.8");
+            conn.addRequestProperty("User-Agent", "Mozilla");
+
+            boolean redirect = false;
+
+            int status = conn.getResponseCode();
+            BufferedReader br = new BufferedReader(new InputStreamReader(
+                    (conn.getInputStream())));
+
+            String output;
+            while((output = br.readLine()) != null){
+                System.out.println(output);
+            }
+            if (status != HttpURLConnection.HTTP_OK) {
+                if (status == HttpURLConnection.HTTP_MOVED_TEMP
+                        || status == HttpURLConnection.HTTP_MOVED_PERM
+                        || status == HttpURLConnection.HTTP_SEE_OTHER)
+                    redirect = true;
+            }
+            if (redirect) {
+                String newUrl = conn.getHeaderField("Location");
+                System.out.println(newUrl);
+            }
+            conn.disconnect();
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+        return "";
+    }
+
+    public static String getFormalTitle(String request){
+        JSONObject jsonObject = null;
+        try {
+            String urlRequest = URLEncoder.encode(request, "UTF-8");
+            URL url = new URL("https://en.wikipedia.org/w/api.php?action=query&list=search&srlimit=max&srsearch=" + urlRequest + "&format=json");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("Accept", "application/json");
+
+            if (conn.getResponseCode() != 200) {
+                throw new RuntimeException("Failed : HTTP error code : "
+                        + conn.getResponseCode());
+            }
+
+            BufferedReader br = new BufferedReader(new InputStreamReader(
+                    (conn.getInputStream())));
+
+            String output = br.readLine();
+            jsonObject = new JSONObject(output);
+            conn.disconnect();
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+        if (jsonObject.getJSONObject("query") == null){
+            return null;
+        }
+        JSONArray results = jsonObject.getJSONObject("query").getJSONArray("search");
+        if (results.length() == 0){
+            return null;
+        }
+        String title = "";
+        for (int i = 0; i < results.length(); i++){
+            title = (String)results.getJSONObject(0).get("title");
+            title = title.replace(" ", "_");
+            break;
+        }
+        if (title.equals(request)){
+            return title;
+        }
+        else {
+            JSONObject redirects = null;
+            try {
+                URL url = new URL("https://en.wikipedia.org/w/api.php?action=query&titles=" + title + "&prop=redirects&format=json");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("Accept", "application/json");
+
+                if (conn.getResponseCode() != 200) {
+                    throw new RuntimeException("Failed : HTTP error code : "
+                            + conn.getResponseCode());
+                }
+
+                BufferedReader br = new BufferedReader(new InputStreamReader(
+                        (conn.getInputStream())));
+
+                String output = br.readLine();
+                redirects = new JSONObject(output);
+                conn.disconnect();
+            }
+            catch (Exception e){
+                e.printStackTrace();
+            }
+            if (redirects.getJSONObject("query") == null){
+                return null;
+            }
+            JSONObject res = redirects.getJSONObject("query").getJSONObject("pages");
+            String key = (String)res.keySet().toArray()[0];
+            JSONArray arr = res.getJSONObject(key).getJSONArray("redirects");
+            for (int i = 0; i < arr.length(); i++){
+                String tmpTitle = (String)arr.getJSONObject(i).get("title");
+                tmpTitle = tmpTitle.replace(" ", "_");
+                if (tmpTitle.equals(request)){
+                    return title;
+                }
+            }
+        }
+        return null;
+    }
+
     public static List<String> getTitlesFromQuery(List<String> queries){
         List<String> titles = new ArrayList<>();
         JSONObject jsonObject = null;
@@ -259,6 +376,9 @@ public class WikiHandler {
 
         } catch (Exception e) {
             e.printStackTrace();
+        }
+        if (!jsonObject.getJSONObject("query").has("pages")){
+            return null;
         }
         JSONObject result = jsonObject.getJSONObject("query").getJSONObject("pages");
         String key = (String)result.keySet().toArray()[0];

@@ -1,0 +1,37 @@
+package org.cogcomp.taxorel.lbjGen;
+import org.cogcomp.taxorel.*;
+import edu.illinois.cs.cogcomp.core.datastructures.Pair;
+import java.util.List;
+
+discrete% figer_bow(FIGERPair mention) <-
+{
+    List cates = mention._features;
+    for (int i = 0; i < cates.size(); i++){
+        sense cates.get(i);
+    }
+}
+
+discrete% figer_type(FIGERPair mention) <-
+{
+    sense mention._type;
+}
+
+discrete figer_label(FIGERPair mention) <-
+{
+    return mention._label;
+}
+
+real% figer_sims(FIGERPair mention) <-
+{
+    List scores = mention._similarities;
+    for (int i = 0; i < scores.size(); i++){
+        sense (Double)scores.get(i);
+    }
+}
+discrete FIGERTypingClassifier(FIGERPair mention) <-
+learn figer_type
+    using figer_bow
+    with SupportVectorMachine {
+
+    }
+end
