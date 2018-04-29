@@ -8,13 +8,13 @@
 package edu.illinois.cs.cogcomp.ner.LbjTagger;
 
 
-import edu.illinois.cs.cogcomp.ner.LbjTagger.ParametersForLbjCode.TokenizationScheme;
-import edu.illinois.cs.cogcomp.ner.StringStatisticsUtils.CharacteristicWords;
 import edu.illinois.cs.cogcomp.lbjava.nlp.SentenceSplitter;
 import edu.illinois.cs.cogcomp.lbjava.nlp.Word;
 import edu.illinois.cs.cogcomp.lbjava.nlp.WordSplitter;
 import edu.illinois.cs.cogcomp.lbjava.parse.LinkedVector;
 import edu.illinois.cs.cogcomp.lbjava.parse.Parser;
+import edu.illinois.cs.cogcomp.ner.LbjTagger.ParametersForLbjCode.TokenizationScheme;
+import edu.illinois.cs.cogcomp.ner.StringStatisticsUtils.CharacteristicWords;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,6 +27,7 @@ public class NEWord extends Word {
     /** This field is used to store a computed named entity type tag. */
     public String neTypeLevel1;
     public String neTypeLevel2;
+    public String neTargetType;
     public NamedEntity predictedEntity = null;// if non-null it keeps the named entity the tagger
                                               // annotated this word with
     public CharacteristicWords predictionConfidencesLevel1Classifier = null;
@@ -80,6 +81,7 @@ public class NEWord extends Word {
         originalForm = w.form;
         neLabel = type;
         neTypeLevel1 = null;
+        neTargetType = null;
     }
 
     /**

@@ -7,10 +7,10 @@
  */
 package edu.illinois.cs.cogcomp.ner.InferenceMethods;
 
-import edu.illinois.cs.cogcomp.ner.LbjTagger.NEWord;
-import edu.illinois.cs.cogcomp.ner.StringStatisticsUtils.CharacteristicWords;
 import edu.illinois.cs.cogcomp.lbjava.classify.Score;
 import edu.illinois.cs.cogcomp.lbjava.learn.SparseNetworkLearner;
+import edu.illinois.cs.cogcomp.ner.LbjTagger.NEWord;
+import edu.illinois.cs.cogcomp.ner.StringStatisticsUtils.CharacteristicWords;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +34,8 @@ class PredictionsToProbabilities {
         int maxScoreIdx = 0;
         double maxScore = scores[maxScoreIdx].score;
         String maxLabel = scores[maxScoreIdx].value;
+        double maxScoreTargetType = scores[maxScoreIdx].score;
+        String maxLabelTargetType = "";
         for (int i = 0; i < scores.length; i++) {
             if (min > scores[i].score)
                 min = scores[i].score;
@@ -41,6 +43,11 @@ class PredictionsToProbabilities {
                 maxScore = scores[i].score;
                 maxScoreIdx = i;
                 maxLabel = scores[i].value;
+            }
+            if (scores[i].score >= maxScoreTargetType &&
+                    (scores[i].value.contains("LOC") || scores[i].value.contains("PER") || scores[i].value.contains("ORG"))){
+                maxScoreTargetType = scores[i].score;
+                maxLabelTargetType = scores[i].value;
             }
         }
         for (int i = 0; i < scores.length; i++)
@@ -71,6 +78,7 @@ class PredictionsToProbabilities {
             w.neTypeLevel2 = maxLabel;
             w.predictionConfidencesLevel2Classifier = res;
         }
+        w.neTargetType = maxLabelTargetType;
         return res;
     }
 }
