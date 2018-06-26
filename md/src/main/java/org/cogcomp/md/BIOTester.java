@@ -1354,8 +1354,12 @@ public class BIOTester {
             train_pro_classifier(train_parser_pro, "models/ERE_PRO");
         }
         else if (corpus.equals("TAC")){
-            Parser train_parser_nom = new BIOReader("data/tac/zh/tac2016.all", "ColumnFormat-TRAIN", "ALL", false);
-            train_nom_classifier(train_parser_nom, "models/TAC_NOM_ZH");
+            //Parser train_parser_nom = new BIOReader("data/tac/en/tac2016.all", "ColumnFormat-TRAIN", "ALL", false);
+            //train_nom_classifier(train_parser_nom, "models/TAC_NOM_ZH");
+            Parser train_parser_nam = new BIOReader("data/tac/2016.nam", "ColumnFormat-TRAIN", "ALL", false);
+            train_nam_classifier(train_parser_nam, "models/TAC_2016_NAM_EN");
+            Parser train_parser_nom = new BIOReader("data/tac/2016.nom", "ColumnFormat-TRAIN", "ALL", false);
+            train_nam_classifier(train_parser_nom, "models/TAC_2016_NOM_EN");
         }
     }
 
@@ -1415,8 +1419,8 @@ public class BIOTester {
 
     public static void main(String[] args){
         //test_hybrid();
-        //TrainModel("TAC");
+        TrainModel("TAC");
         //generateReaders();
-        testMentionMatchWithNps();
+        //testMentionMatchWithNps();
     }
 }

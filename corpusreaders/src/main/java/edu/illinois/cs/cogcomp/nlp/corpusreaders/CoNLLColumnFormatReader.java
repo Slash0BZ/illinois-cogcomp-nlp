@@ -7,6 +7,7 @@
  */
 package edu.illinois.cs.cogcomp.nlp.corpusreaders;
 
+import edu.illinois.cs.cogcomp.annotation.BasicTextAnnotationBuilder;
 import edu.illinois.cs.cogcomp.annotation.TextAnnotationBuilder;
 import edu.illinois.cs.cogcomp.core.datastructures.ViewNames;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.*;
@@ -15,7 +16,6 @@ import edu.illinois.cs.cogcomp.core.datastructures.trees.TreeParserFactory;
 import edu.illinois.cs.cogcomp.core.io.IOUtils;
 import edu.illinois.cs.cogcomp.core.io.LineIO;
 import edu.illinois.cs.cogcomp.core.stats.Counter;
-import edu.illinois.cs.cogcomp.annotation.BasicTextAnnotationBuilder;
 import edu.illinois.cs.cogcomp.nlp.utilities.SentenceUtils;
 import org.slf4j.LoggerFactory;
 
@@ -183,6 +183,7 @@ public class CoNLLColumnFormatReader extends AnnotationReader<TextAnnotation> {
             for (int partId = 0; partId < parts.length; partId++) {
                 parts[partId] = parts[partId].trim();
             }
+            System.out.println("Length: " + parts.length);
 
             // form
             String token = SentenceUtils.convertFromPTBBrackets(parts[0]);

@@ -7,13 +7,14 @@
  */
 package edu.illinois.cs.cogcomp.nlp.corpusreaders;
 
+import edu.illinois.cs.cogcomp.annotation.BasicTextAnnotationBuilder;
 import edu.illinois.cs.cogcomp.core.datastructures.ViewNames;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.*;
 import edu.illinois.cs.cogcomp.core.datastructures.trees.Tree;
 import edu.illinois.cs.cogcomp.core.datastructures.trees.TreeParserFactory;
 import edu.illinois.cs.cogcomp.core.io.IOUtils;
 import edu.illinois.cs.cogcomp.core.io.LineIO;
-import edu.illinois.cs.cogcomp.annotation.BasicTextAnnotationBuilder;
+import edu.illinois.cs.cogcomp.nlp.utilities.CollinsHeadFinder;
 import edu.illinois.cs.cogcomp.nlp.utilities.SentenceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,7 +59,7 @@ public class OntonotesReader extends AnnotationReader<TextAnnotation> {
         this.textAnnotations = new ArrayList<>();
 
         String ontonotesDirectory =
-                this.resourceManager.getString(CorpusReaderConfigurator.CORPUS_DIRECTORY.key);
+                "C:\\Users\\xuany\\Dropbox\\research\\cogcomp-nlp\\data\\conll_coref\\data\\train\\data\\data\\english\\annotations\\bc\\cctv\\00";
 
         String[] files = new String[0];
         // In case the input argument is a single file
@@ -183,6 +184,9 @@ public class OntonotesReader extends AnnotationReader<TextAnnotation> {
 
             String word = replacement(parts[3]);
             sentence.add(word);
+            if (parts.length < 10) {
+                System.out.println(line);
+            }
 
             // PARSE SRL
             if (predicateNumOffset < 0) {
@@ -336,6 +340,9 @@ public class OntonotesReader extends AnnotationReader<TextAnnotation> {
             Tree<String> parseTree = TreeParserFactory.getStringTreeParser().parse(parses.get(j));
             parseView.setParseTree(j, parseTree);
         }
+        CollinsHeadFinder headFinder = CollinsHeadFinder.getInstance();
+        Constituent headWord = headFinder.getHeadWord(parseView.getRootConstituent(0));
+        System.out.println(headWord);
         ta.addView(ViewNames.PARSE_CHARNIAK, parseView);
     }
 

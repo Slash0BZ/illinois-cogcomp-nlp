@@ -17,6 +17,7 @@ import edu.illinois.cs.cogcomp.ner.ExpressiveFeatures.FlatGazetteers;
 import edu.illinois.cs.cogcomp.ner.ExpressiveFeatures.Gazetteers;
 import edu.illinois.cs.cogcomp.ner.ExpressiveFeatures.GazetteersFactory;
 import edu.illinois.cs.cogcomp.nlp.corpusreaders.ACEReader;
+import edu.illinois.cs.cogcomp.nlp.corpusreaders.OntonotesReader;
 import edu.illinois.cs.cogcomp.nlp.corpusreaders.ereReader.EREDocumentReader;
 import edu.illinois.cs.cogcomp.nlp.corpusreaders.ereReader.EREMentionRelationReader;
 import edu.illinois.cs.cogcomp.pos.POSAnnotator;
@@ -117,8 +118,20 @@ public class BIOReader implements Parser
                 ret.add(ta);
             }
         }
+        else if (_mode.equals("ONTONOTES")) {
+            try {
+                OntonotesReader ontonotesReader = new OntonotesReader("");
+                for (TextAnnotation ta : ontonotesReader) {
+                    System.out.println(ta.getAvailableViews());
+                    ret.add(ta);
+                }
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
         else{
-            System.out.println("No defult actions for unknown mode");
+            System.out.println("No default actions for unknown mode");
         }
         return ret;
     }
@@ -171,6 +184,9 @@ public class BIOReader implements Parser
             mentionViewName = ViewNames.MENTION_ERE;
         }
         else if (_mode.equals("ColumnFormat")){
+            mentionViewName = "MENTIONS";
+        }
+        else if (_mode.equals("ONTONOTES")){
             mentionViewName = "MENTIONS";
         }
         else{
@@ -278,5 +294,9 @@ public class BIOReader implements Parser
 
     public void reset(){
         tokenIndex = 0;
+    }
+
+    public static void main(String[] args){
+        BIOReader reader = new BIOReader("", "ONTONOTES-TRAIN", "ALL", false);
     }
 }

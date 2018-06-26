@@ -17,7 +17,6 @@ import edu.illinois.cs.cogcomp.nlp.corpusreaders.aceReader.documentReader.AceFil
 import edu.illinois.cs.cogcomp.nlp.corpusreaders.aceReader.documentReader.ReadACEAnnotation;
 import edu.illinois.cs.cogcomp.nlp.tokenizer.StatefulTokenizer;
 import edu.illinois.cs.cogcomp.nlp.utility.TokenizerTextAnnotationBuilder;
-
 import edu.illinois.cs.cogcomp.pipeline.handlers.StanfordTrueCaseHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +56,7 @@ public class ACEReader extends AnnotationReader<TextAnnotation> {
     private static final String RelationSecondArgumentTag = "Arg-2";
     private static final Logger logger = LoggerFactory.getLogger(ACEReader.class);
     private static final AceFileProcessor fileProcessor = new AceFileProcessor();
-    private static final TextAnnotationBuilder taBuilder = new TokenizerTextAnnotationBuilder(new StatefulTokenizer(false));
+    private static final TextAnnotationBuilder taBuilder = new TokenizerTextAnnotationBuilder(new StatefulTokenizer());
     private final String aceCorpusHome;
     private final boolean is2004mode;
     private final String corpusId;

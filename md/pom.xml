@@ -33,7 +33,7 @@
         <dependency>
             <groupId>edu.illinois.cs.cogcomp</groupId>
             <artifactId>illinois-corpusreaders</artifactId>
-            <version>3.1.28</version>
+            <version>4.0.6</version>
         </dependency>
         <dependency>
             <groupId>edu.illinois.cs.cogcomp</groupId>
