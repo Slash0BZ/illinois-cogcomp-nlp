@@ -199,7 +199,13 @@ public class ExtentTester {
         fullMention.addAttribute("EntityHeadStartSpan", Integer.toString(head.getStartSpan()));
         fullMention.addAttribute("EntityHeadEndSpan", Integer.toString(head.getEndSpan()));
         fullMention.addAttribute("EntityType", head.getAttribute("EntityType"));
+        if (head.getAttribute("EntityType") == null) {
+            fullMention.addAttribute("EntityType", head.getLabel());
+        }
         fullMention.addAttribute("EntityMentionType", head.getAttribute("EntityMentionType"));
+        if (head.getAttribute("EntityMentionType") == null) {
+            fullMention.addAttribute("EntityMentionType", "NAM");
+        }
         return fullMention;
     }
 

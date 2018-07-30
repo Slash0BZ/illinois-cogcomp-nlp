@@ -9,6 +9,8 @@ package edu.illinois.cs.cogcomp.pipeline.server;
 
 import edu.illinois.cs.cogcomp.annotation.AnnotatorException;
 import edu.illinois.cs.cogcomp.annotation.AnnotatorService;
+import edu.illinois.cs.cogcomp.core.datastructures.ViewNames;
+import edu.illinois.cs.cogcomp.core.datastructures.textannotation.Constituent;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.TextAnnotation;
 import edu.illinois.cs.cogcomp.core.utilities.SerializationHelper;
 
@@ -249,6 +251,9 @@ public class MainServer {
                 printMemoryDetails(logger);
             }
             logger.info("Done adding the views. Deserializing the view now.");
+            for (Constituent c : ta.getView(ViewNames.MENTION_EXTENT)) {
+                System.out.println(c);
+            }
             String output = SerializationHelper.serializeToJson(ta);
             logger.info("Done. Sending the result back. ");
             return output;

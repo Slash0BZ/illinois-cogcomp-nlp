@@ -10,11 +10,12 @@ package org.cogcomp.md;
 import edu.illinois.cs.cogcomp.core.datastructures.ViewNames;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.Constituent;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.TextAnnotation;
+import edu.illinois.cs.cogcomp.core.utilities.SerializationHelper;
 import edu.illinois.cs.cogcomp.nlp.corpusreaders.ACEReader;
 import edu.illinois.cs.cogcomp.pos.POSAnnotator;
 
 /**
- * The testing class for MentionAnnotator
+ * The testing class for MentionExtentAnnotator
  * Validating if the annotator is working as expected
  */
 public class AnnotatorTester {
@@ -115,7 +116,29 @@ public class AnnotatorTester {
         System.out.println("Type Correct: " + total_type_correct);
         System.out.println("Extent Correct: " + total_extent_correct);
     }
+    public static void test_extent_annotator(){
+        ACEReader aceReader = null;
+        POSAnnotator posAnnotator = new POSAnnotator();
+        try {
+            aceReader = new ACEReader("data/partition_with_dev/dev", false);
+            MentionExtentAnnotator annotator = new MentionExtentAnnotator();
+            for (TextAnnotation ta : aceReader) {
+                ta.addView(posAnnotator);
+                annotator.addView(ta);
+                System.out.println(SerializationHelper.serializeToJson(ta));
+                for (Constituent pc : ta.getView(ViewNames.MENTION_EXTENT).getConstituents()){
+                    System.out.println(MentionAnnotator.getHeadConstituent(pc, ""));
+                    System.out.println(pc);
+                    System.out.println();
+                }
+                break;
+            }
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+    }
     public static void main(String[] args){
-        test_custom_annotator();
+        test_extent_annotator();
     }
 }

@@ -31,6 +31,7 @@ public class ViewNames {
     public static final String POS = "POS";
 
     public static final String MENTION = "MENTION";
+    public static final String MENTION_EXTENT = "MENTION_EXTENT";
     public static final String RELATION = "RELATION";
 
     /** the tree gazetteer produced by the SimpleGazetteerAnnotator. */
