@@ -7,10 +7,8 @@
  */
 package org.cogcomp.md;
 
-import edu.illinois.cs.cogcomp.core.datastructures.textannotation.*;
-import edu.illinois.cs.cogcomp.nlp.corpusreaders.ereReader.EREDocumentReader;
-import edu.illinois.cs.cogcomp.nlp.corpusreaders.ereReader.EREMentionRelationReader;
 import edu.illinois.cs.cogcomp.core.datastructures.ViewNames;
+import edu.illinois.cs.cogcomp.core.datastructures.textannotation.*;
 import edu.illinois.cs.cogcomp.core.resources.ResourceConfigurator;
 import edu.illinois.cs.cogcomp.edison.utilities.WordNetManager;
 import edu.illinois.cs.cogcomp.lbjava.parse.Parser;
@@ -18,6 +16,8 @@ import edu.illinois.cs.cogcomp.ner.ExpressiveFeatures.BrownClusters;
 import edu.illinois.cs.cogcomp.ner.ExpressiveFeatures.Gazetteers;
 import edu.illinois.cs.cogcomp.ner.ExpressiveFeatures.GazetteersFactory;
 import edu.illinois.cs.cogcomp.nlp.corpusreaders.ACEReader;
+import edu.illinois.cs.cogcomp.nlp.corpusreaders.ereReader.EREDocumentReader;
+import edu.illinois.cs.cogcomp.nlp.corpusreaders.ereReader.EREMentionRelationReader;
 import edu.illinois.cs.cogcomp.pos.POSAnnotator;
 import org.cogcomp.Datastore;
 
@@ -111,6 +111,14 @@ public class ExtentReader implements Parser
                 ret.add((TextAnnotation)ta);
             }
         }
+        if (_corpus.endsWith("COREF")){
+            try {
+                return CorefNameMain.readFile(_path);
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
         return ret;
     }
     public List<Relation> getPairs(){
@@ -147,10 +155,19 @@ public class ExtentReader implements Parser
             if (ta.getId().startsWith("bn") || ta.getId().startsWith("nw")){
                 mentionViewName = ViewNames.MENTION_ACE;
             }
+            if (_corpus.equals("COREF")) {
+                mentionViewName = "MENTIONS";
+            }
             View mentionView = ta.getView(mentionViewName);
             View tokenView = ta.getView(ViewNames.TOKENS);
             for (Constituent mention : mentionView){
-                Constituent head = ACEReader.getEntityHeadForConstituent(mention, ta, "HEADS");
+                Constituent head = null;
+                if (_corpus.equals("COREF")){
+                    head = MentionAnnotator.getPredictedHeadConstituent(mention);
+                }
+                else {
+                    head = ACEReader.getEntityHeadForConstituent(mention, ta, "HEADS");
+                }
                 if (head == null){
                     continue;
                 }

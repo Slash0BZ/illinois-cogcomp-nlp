@@ -29,7 +29,6 @@ import org.cogcomp.Datastore;
 import org.cogcomp.md.LbjGen.*;
 
 import java.io.File;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
@@ -417,20 +416,22 @@ public class ExtentTester {
     }
 
     public static void main(String[] args){
-        if (args.length == 0){
-            System.out.println("No method call given.");
-            return;
-        }
-        String methodName;
-        String methodValue = null;
-        Class[] parameters = new Class[]{};
-        methodName = args[0];
-        try {
-            Method m = ExtentTester.class.getMethod(methodName, parameters);
-            Object ret = m.invoke(methodValue, parameters);
-        }
-        catch (Exception e){
-            e.printStackTrace();
-        }
+        ExtentReader train_parser = new ExtentReader("data/CorefName/train.gold.full.jsonlines", "COREF");
+        train_extent_classifier(train_parser, "data/CorefName/EXTENT_ONTONOTES_PER");
+//        if (args.length == 0){
+//            System.out.println("No method call given.");
+//            return;
+//        }
+//        String methodName;
+//        String methodValue = null;
+//        Class[] parameters = new Class[]{};
+//        methodName = args[0];
+//        try {
+//            Method m = ExtentTester.class.getMethod(methodName, parameters);
+//            Object ret = m.invoke(methodValue, parameters);
+//        }
+//        catch (Exception e){
+//            e.printStackTrace();
+//        }
     }
 }
