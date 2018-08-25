@@ -9,7 +9,6 @@ package org.cogcomp.md;
 
 import edu.illinois.cs.cogcomp.annotation.Annotator;
 import edu.illinois.cs.cogcomp.annotation.AnnotatorException;
-import edu.illinois.cs.cogcomp.core.datastructures.Pair;
 import edu.illinois.cs.cogcomp.core.datastructures.ViewNames;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.Constituent;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.SpanLabelView;
@@ -18,15 +17,11 @@ import edu.illinois.cs.cogcomp.core.datastructures.textannotation.View;
 import edu.illinois.cs.cogcomp.core.resources.ResourceConfigurator;
 import edu.illinois.cs.cogcomp.core.utilities.configuration.ResourceManager;
 import edu.illinois.cs.cogcomp.edison.utilities.WordNetManager;
-import edu.illinois.cs.cogcomp.lbjava.learn.Learner;
 import edu.illinois.cs.cogcomp.ner.ExpressiveFeatures.BrownClusters;
 import edu.illinois.cs.cogcomp.ner.ExpressiveFeatures.FlatGazetteers;
 import edu.illinois.cs.cogcomp.ner.ExpressiveFeatures.GazetteersFactory;
 import edu.illinois.cs.cogcomp.ner.NERAnnotator;
 import org.cogcomp.Datastore;
-import org.cogcomp.md.LbjGen.bio_classifier_nam;
-import org.cogcomp.md.LbjGen.bio_classifier_nom;
-import org.cogcomp.md.LbjGen.bio_classifier_pro;
 import org.cogcomp.md.LbjGen.extent_classifier;
 
 import java.io.File;
@@ -51,7 +46,7 @@ public class MentionExtentAnnotator extends Annotator{
     private String _mode;
 
     public MentionExtentAnnotator(){
-        this(true, "ONTONOTES");
+        this(true, "ONTONOTES_TRAINED");
     }
 
     public MentionExtentAnnotator(String mode) {
@@ -69,6 +64,11 @@ public class MentionExtentAnnotator extends Annotator{
             if (_mode.equals("ONTONOTES")) {
                 File extentFile = ds.getDirectory("org.cogcomp.mention", "ACE_EXTENT", 1.0, false);
                 String fileName_EXTENT = extentFile.getPath() + File.separator + "ACE_EXTENT" + File.separator + "EXTENT_ACE";
+                classifier_extent = new extent_classifier(fileName_EXTENT + ".lc", fileName_EXTENT + ".lex");
+                mentionHeadAnnotator = new NERAnnotator(ViewNames.NER_ONTONOTES);
+            }
+            if (_mode.equals("ONTONOTES_TRAINED")){
+                String fileName_EXTENT = "data/CorefName/EXTENT_ONTONOTES_PER";
                 classifier_extent = new extent_classifier(fileName_EXTENT + ".lc", fileName_EXTENT + ".lex");
                 mentionHeadAnnotator = new NERAnnotator(ViewNames.NER_ONTONOTES);
             }
